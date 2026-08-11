@@ -1,0 +1,17 @@
+snooze:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: ha_alarm_clock
+          multiple: true
+
+dismiss:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: ha_alarm_clock
+          multiple: true

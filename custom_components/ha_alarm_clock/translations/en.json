@@ -1,0 +1,260 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up your first alarm",
+        "description": "The lights fade up over the sunrise, then the alarm rings until you dismiss it. You can add more alarms afterwards, and change any of this later without coming back here.",
+        "data": {
+          "name": "Name",
+          "alarm_time": "Alarm time",
+          "lights": "Lights"
+        },
+        "data_description": {
+          "name": "What to call this alarm, for example Weekday or Guest room.",
+          "alarm_time": "The time the lights start fading up.",
+          "lights": "The lights this alarm brings up. They are set to their dimmest first, then taken to full."
+        },
+        "sections": {
+          "sound": {
+            "name": "Sound",
+            "description": "Optional. Pick speakers and something to play, or leave the speakers empty for a silent, light-only alarm.",
+            "data": {
+              "audio_targets": "Speakers",
+              "audio_media": "What to play",
+              "audio_use_music_assistant": "Play through Music Assistant",
+              "audio_radio_mode": "Radio mode",
+              "audio_volume_start": "Starting volume",
+              "audio_volume_end": "Final volume",
+              "audio_volume_minutes": "Volume ramp length",
+              "phone_critical_sound": "Ring through silent mode"
+            },
+            "data_description": {
+              "audio_targets": "The media players that ring when the alarm does.",
+              "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
+              "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
+              "audio_radio_mode": "Keep playing similar music once the selection ends.",
+              "audio_volume_start": "The volume the speakers are set to just before playback starts.",
+              "audio_volume_end": "The volume the ramp arrives at while the alarm rings.",
+              "audio_volume_minutes": "How long the volume takes to rise from starting to final, in minutes. Zero keeps the starting volume.",
+              "phone_critical_sound": "Let the phone notification sound even when the phone is muted or in Do Not Disturb. Applies to iPhones; on Android, set a sound on the notification channel in the companion app instead."
+            }
+          },
+          "advanced": {
+            "name": "Advanced",
+            "description": "Sensible defaults are already filled in. Each of these also becomes an entity you can change from a dashboard.",
+            "data": {
+              "ramp_minutes": "Sunrise length",
+              "snooze_minutes": "Snooze length",
+              "notify_targets": "Notify these phones"
+            },
+            "data_description": {
+              "ramp_minutes": "How long the lights take to reach full brightness, in minutes.",
+              "snooze_minutes": "How long a snooze lasts before the sunrise starts again from dark.",
+              "notify_targets": "Companion app devices that get a Snooze/Dismiss notification while this alarm rings, re-sent every few minutes until you answer it. Leave empty to rely on the dashboard buttons and your own physical button."
+            }
+          }
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Sunrise Alarm is already set up. Add another alarm to the existing entry instead."
+    }
+  },
+  "config_subentries": {
+    "alarm": {
+      "title": "Alarm",
+      "entry_type": "Alarm",
+      "initiate_flow": {
+        "user": "Add alarm",
+        "reconfigure": "Edit alarm"
+      },
+      "step": {
+        "user": {
+          "title": "Add an alarm",
+          "description": "Each alarm becomes its own device, with its own time, switches and buttons.",
+          "data": {
+            "name": "Name",
+            "alarm_time": "Alarm time",
+            "lights": "Lights"
+          },
+          "data_description": {
+            "name": "What to call this alarm, for example Weekday or Guest room.",
+            "alarm_time": "The time the lights start fading up.",
+            "lights": "The lights this alarm brings up. They are set to their dimmest first, then taken to full."
+          },
+          "sections": {
+            "sound": {
+              "name": "Sound",
+              "description": "Optional. Pick speakers and something to play, or leave the speakers empty for a silent, light-only alarm.",
+              "data": {
+                "audio_targets": "Speakers",
+                "audio_media": "What to play",
+                "audio_use_music_assistant": "Play through Music Assistant",
+                "audio_radio_mode": "Radio mode",
+                "audio_volume_start": "Starting volume",
+                "audio_volume_end": "Final volume",
+                "audio_volume_minutes": "Volume ramp length",
+                "phone_critical_sound": "Ring through silent mode"
+              },
+              "data_description": {
+                "audio_targets": "The media players that ring when the alarm does.",
+                "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
+                "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
+                "audio_radio_mode": "Keep playing similar music once the selection ends.",
+                "audio_volume_start": "The volume the speakers are set to just before playback starts.",
+                "audio_volume_end": "The volume the ramp arrives at while the alarm rings.",
+                "audio_volume_minutes": "How long the volume takes to rise from starting to final, in minutes. Zero keeps the starting volume.",
+                "phone_critical_sound": "Let the phone notification sound even when the phone is muted or in Do Not Disturb. Applies to iPhones; on Android, set a sound on the notification channel in the companion app instead."
+              }
+            },
+            "advanced": {
+              "name": "Advanced",
+              "description": "Sensible defaults are already filled in. Each of these also becomes an entity you can change from a dashboard.",
+              "data": {
+                "ramp_minutes": "Sunrise length",
+                "snooze_minutes": "Snooze length",
+                "notify_targets": "Notify these phones"
+              },
+              "data_description": {
+                "ramp_minutes": "How long the lights take to reach full brightness, in minutes.",
+                "snooze_minutes": "How long a snooze lasts before the sunrise starts again from dark.",
+                "notify_targets": "Companion app devices that get a Snooze/Dismiss notification while this alarm rings, re-sent every few minutes until you answer it. Leave empty to rely on the dashboard buttons and your own physical button."
+              }
+            }
+          }
+        },
+        "reconfigure": {
+          "title": "Edit alarm",
+          "description": "Changes take effect from the next time this alarm is due. An alarm that is ringing right now keeps going.",
+          "data": {
+            "name": "Name",
+            "alarm_time": "Alarm time",
+            "lights": "Lights"
+          },
+          "data_description": {
+            "name": "What to call this alarm, for example Weekday or Guest room.",
+            "alarm_time": "The time the lights start fading up.",
+            "lights": "The lights this alarm brings up. They are set to their dimmest first, then taken to full."
+          },
+          "sections": {
+            "sound": {
+              "name": "Sound",
+              "description": "Optional. Pick speakers and something to play, or leave the speakers empty for a silent, light-only alarm.",
+              "data": {
+                "audio_targets": "Speakers",
+                "audio_media": "What to play",
+                "audio_use_music_assistant": "Play through Music Assistant",
+                "audio_radio_mode": "Radio mode",
+                "audio_volume_start": "Starting volume",
+                "audio_volume_end": "Final volume",
+                "audio_volume_minutes": "Volume ramp length",
+                "phone_critical_sound": "Ring through silent mode"
+              },
+              "data_description": {
+                "audio_targets": "The media players that ring when the alarm does.",
+                "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
+                "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
+                "audio_radio_mode": "Keep playing similar music once the selection ends.",
+                "audio_volume_start": "The volume the speakers are set to just before playback starts.",
+                "audio_volume_end": "The volume the ramp arrives at while the alarm rings.",
+                "audio_volume_minutes": "How long the volume takes to rise from starting to final, in minutes. Zero keeps the starting volume.",
+                "phone_critical_sound": "Let the phone notification sound even when the phone is muted or in Do Not Disturb. Applies to iPhones; on Android, set a sound on the notification channel in the companion app instead."
+              }
+            },
+            "advanced": {
+              "name": "Advanced",
+              "description": "Sensible defaults are already filled in. Each of these also becomes an entity you can change from a dashboard.",
+              "data": {
+                "ramp_minutes": "Sunrise length",
+                "snooze_minutes": "Snooze length",
+                "notify_targets": "Notify these phones"
+              },
+              "data_description": {
+                "ramp_minutes": "How long the lights take to reach full brightness, in minutes.",
+                "snooze_minutes": "How long a snooze lasts before the sunrise starts again from dark.",
+                "notify_targets": "Companion app devices that get a Snooze/Dismiss notification while this alarm rings, re-sent every few minutes until you answer it. Leave empty to rely on the dashboard buttons and your own physical button."
+              }
+            }
+          }
+        }
+      },
+      "abort": {
+        "reconfigure_successful": "The alarm was updated."
+      }
+    }
+  },
+  "exceptions": {
+    "ramp_failed": {
+      "message": "The lights for this alarm could not be brought up."
+    },
+    "ramp_stop_failed": {
+      "message": "The lights for this alarm could not be turned off."
+    },
+    "alarm_not_found": {
+      "message": "No alarm of this integration matches {target}."
+    }
+  },
+  "entity": {
+    "switch": {
+      "alarm_enabled": {
+        "name": "Alarm"
+      },
+      "one_time": {
+        "name": "Only once"
+      }
+    },
+    "binary_sensor": {
+      "ringing": {
+        "name": "Ringing"
+      }
+    },
+    "sensor": {
+      "next_alarm": {
+        "name": "Next alarm"
+      }
+    },
+    "time": {
+      "alarm_time": {
+        "name": "Alarm time"
+      }
+    },
+    "number": {
+      "ramp_minutes": {
+        "name": "Sunrise length"
+      },
+      "snooze_minutes": {
+        "name": "Snooze length"
+      }
+    },
+    "button": {
+      "snooze": {
+        "name": "Snooze"
+      },
+      "dismiss": {
+        "name": "Dismiss"
+      }
+    }
+  },
+  "services": {
+    "snooze": {
+      "name": "Snooze",
+      "description": "Stops the current wake-up and starts it again, from dark, after the alarm's snooze length.",
+      "fields": {
+        "device_id": {
+          "name": "Alarm",
+          "description": "The alarm to snooze."
+        }
+      }
+    },
+    "dismiss": {
+      "name": "Dismiss",
+      "description": "Ends the current wake-up. The lights are left as they are, and an alarm set to fire only once disarms itself.",
+      "fields": {
+        "device_id": {
+          "name": "Alarm",
+          "description": "The alarm to dismiss."
+        }
+      }
+    }
+  }
+}

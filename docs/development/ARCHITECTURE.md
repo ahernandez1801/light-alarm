@@ -1,21 +1,21 @@
 # Architecture Overview
 
-This document describes the technical architecture of the Integration Blueprint custom component for Home Assistant.
+This document describes the technical architecture of the Sunrise Alarm custom component for Home Assistant.
 
 ## Directory Structure
 
 ```text
-custom_components/ha_integration_domain/
+custom_components/ha_alarm_clock/
 ├── __init__.py              # Integration setup and unload
 ├── config_flow.py           # Config flow entry point
 ├── const.py                 # Constants and configuration keys
 ├── coordinator/             # Data update coordinator package
-│   ├── __init__.py          # Exports IntegrationBlueprintDataUpdateCoordinator
+│   ├── __init__.py          # Exports SunriseAlarmDataUpdateCoordinator
 │   └── base.py              # Main coordinator class
 ├── data.py                  # Data classes and type definitions
 ├── diagnostics.py           # Diagnostic data for troubleshooting
 ├── entity/                  # Base entity package
-│   ├── __init__.py          # Exports IntegrationBlueprintEntity
+│   ├── __init__.py          # Exports SunriseAlarmEntity
 │   └── base.py              # Base entity class implementation
 ├── icons.json               # Entity and service action icons
 ├── manifest.json            # Integration metadata
@@ -64,7 +64,7 @@ entity, so no entity ever calls the API itself.
 - Translation of API client exceptions into `ConfigEntryAuthFailed` and `UpdateFailed`
 - Raising and clearing the repair issue for the deprecated API version
 
-**Key class:** `IntegrationBlueprintDataUpdateCoordinator` (exported from `coordinator/__init__.py`)
+**Key class:** `SunriseAlarmDataUpdateCoordinator` (exported from `coordinator/__init__.py`)
 
 Retries and backoff are **not** implemented here. Home Assistant already retries `UpdateFailed`
 with exponential backoff, and failures are logged by Home Assistant, not by the coordinator.
@@ -86,7 +86,7 @@ Handles all communication with external APIs or devices. Implements:
 - Authentication handling
 - Error translation to custom exceptions
 
-**Key class:** `IntegrationBlueprintApiClient`
+**Key class:** `SunriseAlarmApiClient`
 
 ### Config Flow
 
@@ -114,8 +114,8 @@ need one; see [`ha-config-flow`](../../.agents/skills/ha-config-flow/SKILL.md).
 
 **Key classes:**
 
-- `IntegrationBlueprintConfigFlowHandler` (main flow)
-- `IntegrationBlueprintOptionsFlow` (options)
+- `SunriseAlarmConfigFlowHandler` (main flow)
+- `SunriseAlarmOptionsFlow` (options)
 
 ### Base Entity
 
@@ -128,7 +128,7 @@ Provides common functionality for all entities in the integration:
 - Coordinator integration
 - Availability tracking
 
-**Key class:** `IntegrationBlueprintEntity` (in `entity/base.py`)
+**Key class:** `SunriseAlarmEntity` (in `entity/base.py`)
 
 ## Platform Organization
 
@@ -143,7 +143,7 @@ Each platform (sensor, binary_sensor, switch, etc.) follows this pattern:
 Platform entities inherit from both:
 
 1. Home Assistant platform base (e.g., `SensorEntity`)
-2. `IntegrationBlueprintEntity` for common functionality
+2. `SunriseAlarmEntity` for common functionality
 
 ## Data Flow
 
@@ -204,9 +204,9 @@ To add new functionality:
 
 ### Adding a New Platform
 
-1. Create directory: `custom_components/ha_integration_domain/<platform>/`
+1. Create directory: `custom_components/ha_alarm_clock/<platform>/`
 2. Implement `__init__.py` with `async_setup_entry()`
-3. Create entity classes inheriting from platform base + `IntegrationBlueprintEntity`
+3. Create entity classes inheriting from platform base + `SunriseAlarmEntity`
 4. Add platform to `PLATFORMS` in `__init__.py`
 
 ### Adding a New Service Action
@@ -220,6 +220,38 @@ To add new functionality:
 1. Update coordinator data type in `coordinator.py`
 2. Adjust API client response parsing in `api/client.py`
 3. Update entity property implementations to match new structure
+
+## Future Enhancements
+
+### Alarm triggers from other entities
+
+Not yet designed or scheduled. Recorded here so the idea is not lost between sessions.
+
+Today an alarm fires on a schedule (time-based). The eventual goal is to let an alarm also fire from the state of
+another entity already in Home Assistant — for example:
+
+- a `sensor` crossing a numeric threshold (e.g. a CO2 or light-level sensor)
+- a `binary_sensor` changing state (e.g. a door or window sensor)
+- a physical button press (`button` press event, or a `binary_sensor`/`event` entity behind a smart button)
+- motion sensed (`binary_sensor` with `device_class: motion`)
+
+**Rough shape, subject to change:**
+
+- Likely a new trigger-source abstraction the user configures per alarm — probably an entity picker plus a condition
+  (state equals, numeric above/below) via the config flow or options flow
+  ([`ha-config-flow`](../../.agents/skills/ha-config-flow/SKILL.md)).
+- The integration would need to listen for state changes on the chosen entity — most likely
+  `async_track_state_change_event`, not a coordinator poll, since the source entity already updates itself.
+- Does **not** mean building `device_trigger.py` / `device_condition.py` / `device_action.py` — those are frozen
+  upstream and out of scope here (see `AGENTS.md`). This is about _this_ integration reacting to another entity's
+  state, not exposing new device automations.
+- Open questions: one trigger source per alarm or many; AND/OR combination of multiple sources; how this interacts
+  with the existing schedule-based trigger; whether it needs its own entity platform or lives inside the existing
+  alarm entity.
+
+Before starting: run [`ha-grill`](../../.agents/skills/ha-grill/SKILL.md) to pin down the actual requirements, then
+[`ha-planning`](../../.agents/skills/ha-planning/SKILL.md) since this touches config flow, a new listener path, and
+likely the coordinator/entity contract.
 
 ## Testing Strategy
 
