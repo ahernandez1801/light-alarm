@@ -1,0 +1,60 @@
+{
+  "entity": {
+    "switch": {
+      "alarm_enabled": {
+        "default": "mdi:alarm",
+        "state": {
+          "off": "mdi:alarm-off"
+        }
+      },
+      "one_time": {
+        "default": "mdi:numeric-1-circle",
+        "state": {
+          "off": "mdi:repeat"
+        }
+      }
+    },
+    "binary_sensor": {
+      "ringing": {
+        "default": "mdi:bell-outline",
+        "state": {
+          "on": "mdi:bell-ring"
+        }
+      }
+    },
+    "sensor": {
+      "next_alarm": {
+        "default": "mdi:clock-outline"
+      }
+    },
+    "time": {
+      "alarm_time": {
+        "default": "mdi:clock-edit-outline"
+      }
+    },
+    "number": {
+      "ramp_minutes": {
+        "default": "mdi:weather-sunset-up"
+      },
+      "snooze_minutes": {
+        "default": "mdi:timer-sand"
+      }
+    },
+    "button": {
+      "snooze": {
+        "default": "mdi:alarm-snooze"
+      },
+      "dismiss": {
+        "default": "mdi:alarm-check"
+      }
+    }
+  },
+  "services": {
+    "snooze": {
+      "service": "mdi:alarm-snooze"
+    },
+    "dismiss": {
+      "service": "mdi:alarm-check"
+    }
+  }
+}
