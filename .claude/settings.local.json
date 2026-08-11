@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wsl.exe -e bash -lc \"cd /mnt/d/light-alarm && grep -n 'not installed\\\\|version for hassfest' -B8 script/hassfest | head -30\")"
+    ]
+  }
+}
