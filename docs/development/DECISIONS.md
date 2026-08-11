@@ -136,6 +136,82 @@ Currently implements polling-based updates. If the API supports webhooks or WebS
 
 ---
 
+## Scaffolding Decisions
+
+### No API Client — the Integration Computes Its Values
+
+**Date:** 2026-08-11 (Scaffolding)
+
+**Context:** Sunrise Alarm has no device and no endpoint. Its values come from the clock, the alarm configuration, and
+the light entities Home Assistant already has.
+
+**Decision:** Delete the `api/` package. Classify the integration as `integration_type: helper` and
+`iot_class: calculated`. The coordinator keeps its place in the layering but has no update interval — the scheduler
+advances the state and publishes it with `async_set_updated_data`.
+
+**Rationale:**
+
+- There is nothing to fetch, so a client would only wrap a calculation.
+- Entities still read `coordinator.data` and never reach past it, so the layering the rest of the project assumes is
+  intact.
+- A plain state listener was rejected: several alarms share one wake-up cycle, and the entities need a single copy of
+  that state.
+
+**Consequences:**
+
+- No credentials, no reauth flow, and no `ConfigEntryAuthFailed` path.
+- Setup cannot fail for connectivity reasons, so there is no `ConfigEntryNotReady` retry loop either.
+- Adding audio later means adding a phase to the scheduler, not a client.
+
+---
+
+### One Config Entry, One Subentry per Alarm
+
+**Date:** 2026-08-11 (Scaffolding)
+
+**Context:** The integration has to hold an arbitrary number of alarms, each with its own time, lights and entities,
+and each editable after setup.
+
+**Decision:** `single_config_entry: true`. The setup dialog creates the entry together with its first alarm, and every
+further alarm is a config subentry of type `alarm` with its own device. Alarms are edited through the subentry
+reconfigure dialog rather than through `time` and `number` entities.
+
+**Rationale:**
+
+- One device per alarm groups that alarm's switches, buttons and sensors where a user looks for them.
+- Subentries give "Add alarm" and "Edit alarm" in the UI without a second setup flow.
+- Dialog-based editing is cheaper to build now, and adding editing entities later is additive — no entity ID changes.
+
+**Consequences:**
+
+- Every platform's `async_setup_entry` iterates subentries and passes `config_subentry_id` to `async_add_entities`.
+- The unique ID of an entity is `{subentry_id}_{key}`; deleting and re-adding an alarm produces new entities.
+- Changing a subentry reloads the whole entry, which resets any wake-up in progress.
+
+---
+
+### Switch Positions Persist in a Store, Not in the Subentry
+
+**Date:** 2026-08-11 (Scaffolding)
+
+**Context:** "Alarm enabled" and "only once" are switches the user flips at runtime, but they still have to survive a
+restart. The obvious home for them is the subentry data next to the alarm's time and lights.
+
+**Decision:** Keep them in a `homeassistant.helpers.storage.Store` owned by the coordinator, saved with
+`async_delay_save`.
+
+**Rationale:**
+
+- Writing them into the subentry would reload the config entry on every toggle, cancelling a wake-up in progress.
+- The subentry holds configuration the user typed; these two are live state.
+
+**Consequences:**
+
+- Deleting an alarm leaves its stored pair behind until the next save rewrites the file; nothing reads it.
+- Tests that assert persistence need `hass.async_block_till_done()` past the save delay.
+
+---
+
 ## Decision Review
 
 These decisions should be reviewed periodically (suggested: quarterly or when major features are added) to ensure they still serve the integration's needs.
