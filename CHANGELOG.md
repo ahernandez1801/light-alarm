@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/ahernandez1801/light-alarm/compare/v0.2.0...v0.2.1) (2026-08-19)
+
+
+### Features
+
+* **config-flow:** offer Music Assistant playlists in the alarm dialog ([4124b70](https://github.com/ahernandez1801/light-alarm/commit/4124b70dc3d5e0538671b2b1e2f4216097844450))
+* **config-flow:** offer Music Assistant playlists in the alarm dialog ([11a1b86](https://github.com/ahernandez1801/light-alarm/commit/11a1b866c5385c24f960402c7907e78066fd3618))
+
 ## [0.2.0](https://github.com/ahernandez1801/light-alarm/compare/v0.1.0...v0.2.0) (2026-08-19)
 
 
