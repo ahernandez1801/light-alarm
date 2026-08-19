@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/ahernandez1801/light-alarm/compare/v0.2.3...v0.3.0) (2026-08-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* **config-flow:** unchanged and re-derive their sound mode when edited
+
+### Features
+
+* **config-flow:** pick the alarm sound in a dedicated step ([46a98b6](https://github.com/ahernandez1801/light-alarm/commit/46a98b60dbd12877f522d3d5ef2375f9ec94b121))
+
 ## [0.2.3](https://github.com/ahernandez1801/light-alarm/compare/v0.2.2...v0.2.3) (2026-08-19)
 
 
