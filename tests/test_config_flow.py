@@ -8,6 +8,7 @@ from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import entity_registry as er
 
 from .conftest import ALARM_DATA, ALARM_NAME
 
@@ -56,4 +57,28 @@ async def test_subentry_flow_adds_second_alarm(
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert len(init_integration.subentries) == 2
-    assert hass.states.get("sensor.weekend_next_alarm") is not None
+    assert hass.states.get("sensor.sunrise_alarm_weekend_next_alarm") is not None
+
+
+async def test_removing_an_alarm_removes_its_entities(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+) -> None:
+    """Deleting a subentry drops its entities, which no longer cascade via a device."""
+    result = await hass.config_entries.subentries.async_init(
+        (init_integration.entry_id, SUBENTRY_TYPE_ALARM),
+        context={"source": SOURCE_USER},
+    )
+    second = {**ALARM_DATA, CONF_NAME: "Weekend", CONF_ALARM_TIME: "09:30:00"}
+    await hass.config_entries.subentries.async_configure(result["flow_id"], to_form_data(second))
+    await hass.async_block_till_done()
+
+    weekend = next(
+        subentry_id for subentry_id, subentry in init_integration.subentries.items() if subentry.title == "Weekend"
+    )
+    hass.config_entries.async_remove_subentry(init_integration, weekend)
+    await hass.async_block_till_done()
+
+    assert hass.states.get("sensor.sunrise_alarm_weekend_next_alarm") is None
+    assert er.async_get(hass).async_get("sensor.sunrise_alarm_weekend_next_alarm") is None
+    assert hass.states.get("sensor.sunrise_alarm_weekday_next_alarm") is not None

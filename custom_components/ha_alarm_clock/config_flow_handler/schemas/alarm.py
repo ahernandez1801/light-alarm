@@ -13,6 +13,8 @@ from custom_components.ha_alarm_clock.const import (
     CONF_AUDIO_VOLUME_END,
     CONF_AUDIO_VOLUME_MINUTES,
     CONF_AUDIO_VOLUME_START,
+    CONF_GATE_ENTITY,
+    CONF_GATE_STATE,
     CONF_LIGHTS,
     CONF_NOTIFY_TARGETS,
     CONF_PHONE_CRITICAL_SOUND,
@@ -21,6 +23,7 @@ from custom_components.ha_alarm_clock.const import (
     DEFAULT_AUDIO_VOLUME_END,
     DEFAULT_AUDIO_VOLUME_MINUTES,
     DEFAULT_AUDIO_VOLUME_START,
+    DEFAULT_GATE_STATE,
     DEFAULT_RAMP_MINUTES,
     DEFAULT_SNOOZE_MINUTES,
     MAX_AUDIO_VOLUME_MINUTES,
@@ -44,7 +47,13 @@ if TYPE_CHECKING:
 
 DEFAULT_ALARM_TIME = "07:00:00"
 
-ADVANCED_KEYS = (CONF_RAMP_MINUTES, CONF_SNOOZE_MINUTES, CONF_NOTIFY_TARGETS)
+ADVANCED_KEYS = (
+    CONF_RAMP_MINUTES,
+    CONF_SNOOZE_MINUTES,
+    CONF_NOTIFY_TARGETS,
+    CONF_GATE_ENTITY,
+    CONF_GATE_STATE,
+)
 SOUND_KEYS = (
     CONF_AUDIO_TARGETS,
     CONF_AUDIO_MEDIA,
@@ -125,6 +134,8 @@ def _advanced_schema(hass: HomeAssistant) -> vol.Schema:
         {
             vol.Required(CONF_RAMP_MINUTES, default=DEFAULT_RAMP_MINUTES): _minutes_selector(MAX_RAMP_MINUTES),
             vol.Required(CONF_SNOOZE_MINUTES, default=DEFAULT_SNOOZE_MINUTES): _minutes_selector(MAX_SNOOZE_MINUTES),
+            vol.Optional(CONF_GATE_ENTITY): selector.EntitySelector(),
+            vol.Optional(CONF_GATE_STATE, default=DEFAULT_GATE_STATE): selector.TextSelector(),
         },
     )
 

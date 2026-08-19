@@ -1,8 +1,9 @@
 # Alarm Sound
 
 Every alarm can ring audibly as well as visually. Sound is optional: an alarm with no speakers configured is a
-silent, light-only alarm, and everything on this page can be set per alarm in its **Sound** section — open the
-alarm's device page and choose **Edit alarm**, or use **Add alarm** on the Sunrise Alarm integration entry.
+silent, light-only alarm, and everything on this page — the speakers included — can be changed at any time in the
+alarm's **Sound** section: open the Sunrise Alarm integration entry, choose **Edit alarm** next to the alarm, or
+**Add alarm** to create a new one.
 
 Sound is best-effort by design. If a speaker is offline or playback fails, the alarm still rings: the lights, the
 notifications and the Snooze/Dismiss buttons are never affected by an audio problem.

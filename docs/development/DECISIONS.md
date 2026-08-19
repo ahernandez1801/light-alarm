@@ -176,6 +176,9 @@ and each editable after setup.
 further alarm is a config subentry of type `alarm` with its own device. Alarms are edited through the subentry
 reconfigure dialog rather than through `time` and `number` entities.
 
+> **Partially superseded (2026-08-18):** the one-device-per-alarm half is replaced by "One Shared Device, Alarms
+> Named Through a Placeholder" below. The single entry and the subentry-per-alarm shape stand.
+
 **Rationale:**
 
 - One device per alarm groups that alarm's switches, buttons and sensors where a user looks for them.
@@ -209,6 +212,34 @@ restart. The obvious home for them is the subentry data next to the alarm's time
 
 - Deleting an alarm leaves its stored pair behind until the next save rewrites the file; nothing reads it.
 - Tests that assert persistence need `hass.async_block_till_done()` past the save delay.
+
+---
+
+### One Shared Device, Alarms Named Through a Placeholder
+
+**Date:** 2026-08-18
+
+**Context:** One device per alarm scattered the integration across as many device pages as there are alarms, and
+`integration_type: helper` filed the entry under Helpers — the developer looked for one integration with the alarms
+inside it and could not find the edit dialogs.
+
+**Decision:** All entities sit on one device owned by the config entry (`identifiers={(DOMAIN, entry_id)}`), each
+carrying its alarm's name through the `alarm_name` translation placeholder. Entities are no longer registered with
+`config_subentry_id`. `integration_type` becomes `service`. The snooze and dismiss actions still target the device and
+resolve to every alarm of its entry; the scheduler ignores the idle ones, so they act on the active wake-up.
+
+**Rationale:**
+
+- One page listing every alarm's entities matches how the household actually uses it.
+- Per-alarm names must come from a placeholder because every alarm now shares the device name.
+- Device targeting for the actions stays valid — "one at a time" means the active alarm is unambiguous.
+
+**Consequences:**
+
+- Breaking pre-release: entity IDs gain the `sunrise_alarm_` device prefix. No migration, per the pre-1.0 policy.
+- Deleting a subentry no longer cascades through a device; `_async_remove_stale_registry_entries` in `__init__.py`
+  removes orphaned registry entries (and any leftover per-alarm device) on the reload that follows.
+- Unique IDs are unchanged (`{subentry_id}_{key}`).
 
 ---
 

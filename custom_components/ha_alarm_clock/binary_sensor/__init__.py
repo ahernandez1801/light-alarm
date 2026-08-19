@@ -21,11 +21,8 @@ async def async_setup_entry(
     """Set up the binary sensor platform, one per alarm."""
     coordinator = entry.runtime_data.coordinator
 
-    for subentry_id, subentry in entry.subentries.items():
-        async_add_entities(
-            (
-                SunriseAlarmRingingBinarySensor(coordinator, subentry, description)
-                for description in ENTITY_DESCRIPTIONS
-            ),
-            config_subentry_id=subentry_id,
-        )
+    async_add_entities(
+        SunriseAlarmRingingBinarySensor(coordinator, subentry, description)
+        for subentry in entry.subentries.values()
+        for description in ENTITY_DESCRIPTIONS
+    )

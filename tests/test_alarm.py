@@ -8,19 +8,32 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 from custom_components.ha_alarm_clock.const import (
     ACTION_DISMISS_PREFIX,
     ACTION_SNOOZE_PREFIX,
+    CONF_GATE_ENTITY,
+    CONF_GATE_STATE,
     CONF_NOTIFY_TARGETS,
     CONF_RAMP_MINUTES,
+    DOMAIN,
     EVENT_MOBILE_APP_ACTION,
     NOTIFY_DOMAIN,
 )
 from homeassistant.components.light import ATTR_BRIGHTNESS, ATTR_TRANSITION, DOMAIN as LIGHT_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON, STATE_OFF, STATE_ON, STATE_UNKNOWN
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    SERVICE_TURN_OFF,
+    SERVICE_TURN_ON,
+    STATE_OFF,
+    STATE_ON,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+)
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from .conftest import RAMP_MINUTES, SNOOZE_MINUTES, AlarmCycle, AlarmEntities
 
 NOTIFY_SERVICE = "mobile_app_test"
+GATE_ENTITY = "person.tester"
 
 
 async def test_entities_created_per_alarm(
@@ -245,3 +258,74 @@ async def test_durations_are_editable(
 
     subentry = next(iter(init_integration.subentries.values()))
     assert subentry.data[CONF_RAMP_MINUTES] == 30
+
+
+async def test_all_entities_share_the_integration_device(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    entities: AlarmEntities,
+) -> None:
+    """Every entity of every alarm sits on the entry's single device."""
+    device = dr.async_get(hass).async_get_device_by_identifier(
+        (DOMAIN, init_integration.entry_id),
+        init_integration.entry_id,
+    )
+    assert device is not None
+
+    entity_registry = er.async_get(hass)
+    for entity_id in (entities.alarm, entities.ringing, entities.next_alarm, entities.snooze, entities.alarm_time):
+        registry_entry = entity_registry.async_get(entity_id)
+        assert registry_entry is not None
+        assert registry_entry.device_id == device.id
+
+
+async def test_gate_skips_the_alarm_for_the_day(
+    hass: HomeAssistant,
+    alarm_data: dict[str, Any],
+    setup_with_data: Any,
+    cycle: AlarmCycle,
+) -> None:
+    """An alarm whose gate entity is not in the required state skips its day."""
+    turn_on = async_mock_service(hass, LIGHT_DOMAIN, SERVICE_TURN_ON)
+    hass.states.async_set(GATE_ENTITY, "not_home")
+
+    await setup_with_data({**alarm_data, CONF_GATE_ENTITY: GATE_ENTITY, CONF_GATE_STATE: "home"})
+
+    ring_at = await cycle.start_sunrise()
+
+    assert turn_on == []
+    assert cycle.next_ring() == ring_at + timedelta(days=1)
+
+
+async def test_gate_in_the_required_state_lets_the_alarm_fire(
+    hass: HomeAssistant,
+    alarm_data: dict[str, Any],
+    setup_with_data: Any,
+    cycle: AlarmCycle,
+    entities: AlarmEntities,
+) -> None:
+    """An alarm whose gate entity is in the required state rings as normal."""
+    async_mock_service(hass, LIGHT_DOMAIN, SERVICE_TURN_ON)
+    hass.states.async_set(GATE_ENTITY, "home")
+
+    await setup_with_data({**alarm_data, CONF_GATE_ENTITY: GATE_ENTITY, CONF_GATE_STATE: "home"})
+    await cycle.reach_ringing()
+
+    assert hass.states.get(entities.ringing).state == STATE_ON
+
+
+async def test_unavailable_gate_never_blocks(
+    hass: HomeAssistant,
+    alarm_data: dict[str, Any],
+    setup_with_data: Any,
+    cycle: AlarmCycle,
+    entities: AlarmEntities,
+) -> None:
+    """A broken presence tracker must not silently cancel a wake-up."""
+    async_mock_service(hass, LIGHT_DOMAIN, SERVICE_TURN_ON)
+    hass.states.async_set(GATE_ENTITY, STATE_UNAVAILABLE)
+
+    await setup_with_data({**alarm_data, CONF_GATE_ENTITY: GATE_ENTITY, CONF_GATE_STATE: "home"})
+    await cycle.reach_ringing()
+
+    assert hass.states.get(entities.ringing).state == STATE_ON

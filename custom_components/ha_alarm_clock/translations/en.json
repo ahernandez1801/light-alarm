@@ -71,7 +71,7 @@
       "step": {
         "user": {
           "title": "Add an alarm",
-          "description": "Each alarm becomes its own device, with its own time, switches and buttons.",
+          "description": "Every alarm gets its own set of entities — named after it — on the Sunrise Alarm device.",
           "data": {
             "name": "Name",
             "alarm_time": "Alarm time",
@@ -113,12 +113,16 @@
               "data": {
                 "ramp_minutes": "Sunrise length",
                 "snooze_minutes": "Snooze length",
-                "notify_targets": "Notify these phones"
+                "notify_targets": "Notify these phones",
+                "gate_entity": "Presence check",
+                "gate_state": "Required state"
               },
               "data_description": {
                 "ramp_minutes": "How long the lights take to reach full brightness, in minutes.",
                 "snooze_minutes": "How long a snooze lasts before the sunrise starts again from dark.",
-                "notify_targets": "Companion app devices that get a Snooze/Dismiss notification while this alarm rings, re-sent every few minutes until you answer it. Leave empty to rely on the dashboard buttons and your own physical button."
+                "notify_targets": "Companion app devices that get a Snooze/Dismiss notification while this alarm rings, re-sent every few minutes until you answer it. Leave empty to rely on the dashboard buttons and your own physical button.",
+                "gate_entity": "Optional. An entity that must be in the required state below for this alarm to fire — your person entity, for example. When it is in any other state, the alarm skips that day.",
+                "gate_state": "The state the presence check must be in for the alarm to fire, for example home or on. A presence check that is unavailable never blocks the alarm."
               }
             }
           }
@@ -167,12 +171,16 @@
               "data": {
                 "ramp_minutes": "Sunrise length",
                 "snooze_minutes": "Snooze length",
-                "notify_targets": "Notify these phones"
+                "notify_targets": "Notify these phones",
+                "gate_entity": "Presence check",
+                "gate_state": "Required state"
               },
               "data_description": {
                 "ramp_minutes": "How long the lights take to reach full brightness, in minutes.",
                 "snooze_minutes": "How long a snooze lasts before the sunrise starts again from dark.",
-                "notify_targets": "Companion app devices that get a Snooze/Dismiss notification while this alarm rings, re-sent every few minutes until you answer it. Leave empty to rely on the dashboard buttons and your own physical button."
+                "notify_targets": "Companion app devices that get a Snooze/Dismiss notification while this alarm rings, re-sent every few minutes until you answer it. Leave empty to rely on the dashboard buttons and your own physical button.",
+                "gate_entity": "Optional. An entity that must be in the required state below for this alarm to fire — your person entity, for example. When it is in any other state, the alarm skips that day.",
+                "gate_state": "The state the presence check must be in for the alarm to fire, for example home or on. A presence check that is unavailable never blocks the alarm."
               }
             }
           }
@@ -197,41 +205,41 @@
   "entity": {
     "switch": {
       "alarm_enabled": {
-        "name": "Alarm"
+        "name": "{alarm_name} Alarm"
       },
       "one_time": {
-        "name": "Only once"
+        "name": "{alarm_name} Only once"
       }
     },
     "binary_sensor": {
       "ringing": {
-        "name": "Ringing"
+        "name": "{alarm_name} Ringing"
       }
     },
     "sensor": {
       "next_alarm": {
-        "name": "Next alarm"
+        "name": "{alarm_name} Next alarm"
       }
     },
     "time": {
       "alarm_time": {
-        "name": "Alarm time"
+        "name": "{alarm_name} Alarm time"
       }
     },
     "number": {
       "ramp_minutes": {
-        "name": "Sunrise length"
+        "name": "{alarm_name} Sunrise length"
       },
       "snooze_minutes": {
-        "name": "Snooze length"
+        "name": "{alarm_name} Snooze length"
       }
     },
     "button": {
       "snooze": {
-        "name": "Snooze"
+        "name": "{alarm_name} Snooze"
       },
       "dismiss": {
-        "name": "Dismiss"
+        "name": "{alarm_name} Dismiss"
       }
     }
   },
@@ -242,7 +250,7 @@
       "fields": {
         "device_id": {
           "name": "Alarm",
-          "description": "The alarm to snooze."
+          "description": "The Sunrise Alarm device. Whichever of its alarms is currently in a wake-up is snoozed."
         }
       }
     },
@@ -252,7 +260,7 @@
       "fields": {
         "device_id": {
           "name": "Alarm",
-          "description": "The alarm to dismiss."
+          "description": "The Sunrise Alarm device. Whichever of its alarms is currently in a wake-up is dismissed."
         }
       }
     }
