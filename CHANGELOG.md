@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/ahernandez1801/light-alarm/compare/v0.2.2...v0.2.3) (2026-08-19)
+
+
+### Bug Fixes
+
+* **audio:** make Music Assistant playback actually start ([945f329](https://github.com/ahernandez1801/light-alarm/commit/945f329227cc7c62bfe61c9e66d840add6bb1016))
+
 ## [0.2.2](https://github.com/ahernandez1801/light-alarm/compare/v0.2.1...v0.2.2) (2026-08-19)
 
 
