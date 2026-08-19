@@ -21,6 +21,7 @@
             "data": {
               "audio_targets": "Speakers",
               "audio_media": "What to play",
+              "audio_playlist": "Music Assistant playlist",
               "audio_use_music_assistant": "Play through Music Assistant",
               "audio_radio_mode": "Radio mode",
               "audio_volume_start": "Starting volume",
@@ -31,6 +32,7 @@
             "data_description": {
               "audio_targets": "The media players that ring when the alarm does.",
               "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
+              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. Pick one from the list, or type any Music Assistant URI.",
               "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
               "audio_radio_mode": "Keep playing similar music once the selection ends.",
               "audio_volume_start": "The volume the speakers are set to just before playback starts.",
@@ -89,6 +91,7 @@
               "data": {
                 "audio_targets": "Speakers",
                 "audio_media": "What to play",
+              "audio_playlist": "Music Assistant playlist",
                 "audio_use_music_assistant": "Play through Music Assistant",
                 "audio_radio_mode": "Radio mode",
                 "audio_volume_start": "Starting volume",
@@ -99,6 +102,7 @@
               "data_description": {
                 "audio_targets": "The media players that ring when the alarm does.",
                 "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
+              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. Pick one from the list, or type any Music Assistant URI.",
                 "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
                 "audio_radio_mode": "Keep playing similar music once the selection ends.",
                 "audio_volume_start": "The volume the speakers are set to just before playback starts.",
@@ -147,6 +151,7 @@
               "data": {
                 "audio_targets": "Speakers",
                 "audio_media": "What to play",
+              "audio_playlist": "Music Assistant playlist",
                 "audio_use_music_assistant": "Play through Music Assistant",
                 "audio_radio_mode": "Radio mode",
                 "audio_volume_start": "Starting volume",
@@ -157,6 +162,7 @@
               "data_description": {
                 "audio_targets": "The media players that ring when the alarm does.",
                 "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
+              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. Pick one from the list, or type any Music Assistant URI.",
                 "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
                 "audio_radio_mode": "Keep playing similar music once the selection ends.",
                 "audio_volume_start": "The volume the speakers are set to just before playback starts.",

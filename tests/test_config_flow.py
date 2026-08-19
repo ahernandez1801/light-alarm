@@ -1,16 +1,28 @@
 """Config flow and subentry flow tests for ha_alarm_clock."""
 
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
 from custom_components.ha_alarm_clock.config_flow_handler.schemas import to_form_data
-from custom_components.ha_alarm_clock.const import CONF_ALARM_TIME, DOMAIN, SUBENTRY_TYPE_ALARM
-from homeassistant.config_entries import SOURCE_USER
+from custom_components.ha_alarm_clock.const import (
+    CONF_ALARM_TIME,
+    CONF_AUDIO_PLAYLIST,
+    DOMAIN,
+    MUSIC_ASSISTANT_DOMAIN,
+    MUSIC_ASSISTANT_SERVICE_GET_LIBRARY,
+    MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA,
+    SECTION_SOUND,
+    SUBENTRY_TYPE_ALARM,
+)
+from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.const import CONF_NAME
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
 
 from .conftest import ALARM_DATA, ALARM_NAME
+
+PLAYLIST_URI = "library://playlist/12"
+PLAYLIST_NAME = "Morning"
 
 
 async def test_user_flow_creates_entry_with_first_alarm(hass: HomeAssistant) -> None:
@@ -30,6 +42,38 @@ async def test_user_flow_creates_entry_with_first_alarm(hass: HomeAssistant) -> 
     assert subentry.subentry_type == SUBENTRY_TYPE_ALARM
     assert subentry.title == ALARM_NAME
     assert subentry.data[CONF_ALARM_TIME] == ALARM_DATA[CONF_ALARM_TIME]
+
+
+async def test_alarm_form_offers_music_assistant_playlists(hass: HomeAssistant) -> None:
+    """With Music Assistant present, the sound section offers its playlists and stores the pick."""
+    music_assistant = MockConfigEntry(domain=MUSIC_ASSISTANT_DOMAIN)
+    music_assistant.add_to_hass(hass)
+    music_assistant.mock_state(hass, ConfigEntryState.LOADED)
+    async_mock_service(hass, MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
+    async_mock_service(
+        hass,
+        MUSIC_ASSISTANT_DOMAIN,
+        MUSIC_ASSISTANT_SERVICE_GET_LIBRARY,
+        response={"items": [{"name": PLAYLIST_NAME, "uri": PLAYLIST_URI, "media_type": "playlist"}]},
+        supports_response=SupportsResponse.ONLY,
+    )
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+
+    sound = result["data_schema"].schema[SECTION_SOUND]
+    playlist_field = sound.schema.schema[CONF_AUDIO_PLAYLIST]
+    assert playlist_field.config["options"] == [{"value": PLAYLIST_URI, "label": PLAYLIST_NAME}]
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        to_form_data({**ALARM_DATA, CONF_AUDIO_PLAYLIST: PLAYLIST_URI}),
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    subentry = next(iter(entry.subentries.values()))
+    assert subentry.data[CONF_AUDIO_PLAYLIST] == PLAYLIST_URI
 
 
 async def test_single_entry_only(hass: HomeAssistant, init_integration: MockConfigEntry) -> None:

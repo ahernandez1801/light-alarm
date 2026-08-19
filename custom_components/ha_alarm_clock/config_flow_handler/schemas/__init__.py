@@ -1,5 +1,5 @@
-"""Voluptuous schemas for the alarm forms."""
+"""Schemas for the config and subentry flows."""
 
-from .alarm import flatten_alarm_input, get_alarm_schema, to_form_data
+from .alarm import async_get_alarm_schema, flatten_alarm_input, to_form_data
 
-__all__ = ["flatten_alarm_input", "get_alarm_schema", "to_form_data"]
+__all__ = ["async_get_alarm_schema", "flatten_alarm_input", "to_form_data"]

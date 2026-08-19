@@ -1,5 +1,6 @@
 """Voluptuous schema for the alarm dialog, shared by setup, add and reconfigure."""
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
@@ -7,6 +8,7 @@ import voluptuous as vol
 from custom_components.ha_alarm_clock.const import (
     CONF_ALARM_TIME,
     CONF_AUDIO_MEDIA,
+    CONF_AUDIO_PLAYLIST,
     CONF_AUDIO_RADIO_MODE,
     CONF_AUDIO_TARGETS,
     CONF_AUDIO_USE_MUSIC_ASSISTANT,
@@ -26,10 +28,13 @@ from custom_components.ha_alarm_clock.const import (
     DEFAULT_GATE_STATE,
     DEFAULT_RAMP_MINUTES,
     DEFAULT_SNOOZE_MINUTES,
+    LOGGER,
     MAX_AUDIO_VOLUME_MINUTES,
     MAX_RAMP_MINUTES,
     MAX_SNOOZE_MINUTES,
     MUSIC_ASSISTANT_DOMAIN,
+    MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST,
+    MUSIC_ASSISTANT_SERVICE_GET_LIBRARY,
     MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA,
     NOTIFY_DOMAIN,
     NOTIFY_SERVICE_PREFIX,
@@ -38,14 +43,26 @@ from custom_components.ha_alarm_clock.const import (
 )
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_NAME, PERCENTAGE
 from homeassistant.data_entry_flow import section
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 DEFAULT_ALARM_TIME = "07:00:00"
+
+ATTR_MA_CONFIG_ENTRY_ID = "config_entry_id"
+ATTR_MA_ITEMS = "items"
+ATTR_MA_LIMIT = "limit"
+ATTR_MA_MEDIA_TYPE = "media_type"
+ATTR_MA_NAME = "name"
+ATTR_MA_URI = "uri"
+
+PLAYLIST_FETCH_LIMIT = 500
+PLAYLIST_FETCH_TIMEOUT_SECONDS = 10
 
 ADVANCED_KEYS = (
     CONF_RAMP_MINUTES,
@@ -57,6 +74,7 @@ ADVANCED_KEYS = (
 SOUND_KEYS = (
     CONF_AUDIO_TARGETS,
     CONF_AUDIO_MEDIA,
+    CONF_AUDIO_PLAYLIST,
     CONF_AUDIO_USE_MUSIC_ASSISTANT,
     CONF_AUDIO_RADIO_MODE,
     CONF_AUDIO_VOLUME_START,
@@ -67,7 +85,7 @@ SOUND_KEYS = (
 SECTIONS = (SECTION_ADVANCED, SECTION_SOUND)
 
 
-def get_alarm_schema(hass: HomeAssistant) -> vol.Schema:
+async def async_get_alarm_schema(hass: HomeAssistant) -> vol.Schema:
     """
     Return the schema describing one alarm.
 
@@ -85,7 +103,10 @@ def get_alarm_schema(hass: HomeAssistant) -> vol.Schema:
             vol.Required(CONF_LIGHTS): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=LIGHT_DOMAIN, multiple=True),
             ),
-            vol.Required(SECTION_SOUND): section(_sound_schema(hass), {"collapsed": True}),
+            vol.Required(SECTION_SOUND): section(
+                _sound_schema(hass, await _async_music_assistant_playlists(hass)),
+                {"collapsed": True},
+            ),
             vol.Required(SECTION_ADVANCED): section(_advanced_schema(hass), {"collapsed": True}),
         },
     )
@@ -156,23 +177,39 @@ def _advanced_schema(hass: HomeAssistant) -> vol.Schema:
     return schema
 
 
-def _sound_schema(hass: HomeAssistant) -> vol.Schema:
+def _sound_schema(hass: HomeAssistant, playlists: list[selector.SelectOptionDict]) -> vol.Schema:
     """
     Return the audio fields, offering only what the installation has.
 
-    The Music Assistant toggles appear only when that integration is installed, and the
-    phone sound toggle only when a companion app is around to carry it.
+    The playlist picker and the Music Assistant toggles appear only when that integration
+    is installed, and the phone sound toggle only when a companion app is around to carry
+    it.
 
     Returns:
         The schema for the collapsed sound section.
 
     """
-    schema = vol.Schema(
-        {
-            vol.Optional(CONF_AUDIO_TARGETS, default=[]): selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=MEDIA_PLAYER_DOMAIN, multiple=True),
+    music_assistant = hass.services.has_service(MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
+
+    fields: dict[Any, Any] = {
+        vol.Optional(CONF_AUDIO_TARGETS, default=[]): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=MEDIA_PLAYER_DOMAIN, multiple=True),
+        ),
+        vol.Optional(CONF_AUDIO_MEDIA): selector.MediaSelector(),
+    }
+
+    if music_assistant:
+        fields[vol.Optional(CONF_AUDIO_PLAYLIST)] = selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=playlists,
+                mode=selector.SelectSelectorMode.DROPDOWN,
+                custom_value=True,
+                sort=True,
             ),
-            vol.Optional(CONF_AUDIO_MEDIA): selector.MediaSelector(),
+        )
+
+    fields.update(
+        {
             vol.Required(CONF_AUDIO_VOLUME_START, default=DEFAULT_AUDIO_VOLUME_START): _percentage_selector(),
             vol.Required(CONF_AUDIO_VOLUME_END, default=DEFAULT_AUDIO_VOLUME_END): _percentage_selector(),
             vol.Required(CONF_AUDIO_VOLUME_MINUTES, default=DEFAULT_AUDIO_VOLUME_MINUTES): _minutes_selector(
@@ -182,8 +219,8 @@ def _sound_schema(hass: HomeAssistant) -> vol.Schema:
         },
     )
 
-    if hass.services.has_service(MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA):
-        schema = schema.extend(
+    if music_assistant:
+        fields.update(
             {
                 vol.Required(CONF_AUDIO_USE_MUSIC_ASSISTANT, default=False): selector.BooleanSelector(),
                 vol.Required(CONF_AUDIO_RADIO_MODE, default=False): selector.BooleanSelector(),
@@ -191,13 +228,56 @@ def _sound_schema(hass: HomeAssistant) -> vol.Schema:
         )
 
     if _notify_options(hass):
-        schema = schema.extend(
-            {
-                vol.Required(CONF_PHONE_CRITICAL_SOUND, default=True): selector.BooleanSelector(),
-            },
+        fields[vol.Required(CONF_PHONE_CRITICAL_SOUND, default=True)] = selector.BooleanSelector()
+
+    return vol.Schema(fields)
+
+
+async def _async_music_assistant_playlists(hass: HomeAssistant) -> list[selector.SelectOptionDict]:
+    """
+    Return the playlists of every loaded Music Assistant instance.
+
+    Returns:
+        One option per playlist, valued by its Music Assistant URI — empty when Music
+        Assistant is absent, still starting up, or cannot be reached.
+
+    """
+    if not hass.services.has_service(MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_GET_LIBRARY):
+        return []
+
+    options: list[selector.SelectOptionDict] = []
+    for entry in hass.config_entries.async_entries(MUSIC_ASSISTANT_DOMAIN):
+        if entry.state is not ConfigEntryState.LOADED:
+            continue
+
+        try:
+            async with asyncio.timeout(PLAYLIST_FETCH_TIMEOUT_SECONDS):
+                response = await hass.services.async_call(
+                    MUSIC_ASSISTANT_DOMAIN,
+                    MUSIC_ASSISTANT_SERVICE_GET_LIBRARY,
+                    {
+                        ATTR_MA_CONFIG_ENTRY_ID: entry.entry_id,
+                        ATTR_MA_MEDIA_TYPE: MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST,
+                        ATTR_MA_LIMIT: PLAYLIST_FETCH_LIMIT,
+                    },
+                    blocking=True,
+                    return_response=True,
+                )
+        except (HomeAssistantError, TimeoutError) as exception:
+            LOGGER.warning("Could not list the Music Assistant playlists for the alarm form: %s", exception)
+            continue
+
+        items = (response or {}).get(ATTR_MA_ITEMS)
+        if not isinstance(items, list):
+            continue
+
+        options.extend(
+            selector.SelectOptionDict(value=str(item[ATTR_MA_URI]), label=str(item[ATTR_MA_NAME]))
+            for item in items
+            if isinstance(item, dict) and item.get(ATTR_MA_URI)
         )
 
-    return schema
+    return options
 
 
 def _minutes_selector(maximum: int, *, minimum: int = 1) -> selector.NumberSelector:

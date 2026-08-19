@@ -15,6 +15,7 @@ MANUFACTURER = "Sunrise Alarm"
 
 CONF_ALARM_TIME = "alarm_time"
 CONF_AUDIO_MEDIA = "audio_media"
+CONF_AUDIO_PLAYLIST = "audio_playlist"
 CONF_AUDIO_RADIO_MODE = "audio_radio_mode"
 CONF_AUDIO_TARGETS = "audio_targets"
 CONF_AUDIO_USE_MUSIC_ASSISTANT = "audio_use_music_assistant"
@@ -41,6 +42,8 @@ MAX_RAMP_MINUTES = 60
 MAX_SNOOZE_MINUTES = 60
 
 MUSIC_ASSISTANT_DOMAIN = "music_assistant"
+MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST = "playlist"
+MUSIC_ASSISTANT_SERVICE_GET_LIBRARY = "get_library"
 MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA = "play_media"
 
 STORAGE_KEY = f"{DOMAIN}.alarm_state"

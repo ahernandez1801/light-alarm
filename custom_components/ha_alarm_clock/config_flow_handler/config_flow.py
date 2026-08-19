@@ -7,7 +7,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 
-from .schemas import flatten_alarm_input, get_alarm_schema
+from .schemas import async_get_alarm_schema, flatten_alarm_input
 from .subentry_flow import AlarmSubentryFlowHandler
 
 
@@ -57,7 +57,7 @@ class SunriseAlarmConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 ],
             )
 
-        return self.async_show_form(step_id="user", data_schema=get_alarm_schema(self.hass))
+        return self.async_show_form(step_id="user", data_schema=await async_get_alarm_schema(self.hass))
 
 
 __all__ = ["SunriseAlarmConfigFlowHandler"]

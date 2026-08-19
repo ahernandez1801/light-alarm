@@ -5,7 +5,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigSubentryFlow, SubentryFlowResult
 from homeassistant.const import CONF_NAME
 
-from .schemas import flatten_alarm_input, get_alarm_schema, to_form_data
+from .schemas import async_get_alarm_schema, flatten_alarm_input, to_form_data
 
 
 class AlarmSubentryFlowHandler(ConfigSubentryFlow):
@@ -26,7 +26,7 @@ class AlarmSubentryFlowHandler(ConfigSubentryFlow):
             alarm = flatten_alarm_input(user_input)
             return self.async_create_entry(title=alarm[CONF_NAME], data=alarm)
 
-        return self.async_show_form(step_id="user", data_schema=get_alarm_schema(self.hass))
+        return self.async_show_form(step_id="user", data_schema=await async_get_alarm_schema(self.hass))
 
     async def async_step_reconfigure(
         self,
@@ -53,7 +53,7 @@ class AlarmSubentryFlowHandler(ConfigSubentryFlow):
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=self.add_suggested_values_to_schema(
-                get_alarm_schema(self.hass),
+                await async_get_alarm_schema(self.hass),
                 to_form_data(dict(subentry.data)),
             ),
         )
