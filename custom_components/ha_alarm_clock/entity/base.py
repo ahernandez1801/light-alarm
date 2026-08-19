@@ -17,8 +17,10 @@ class SunriseAlarmEntity(CoordinatorEntity[SunriseAlarmDataUpdateCoordinator]):
     """
     Base entity for the entities of one alarm.
 
-    Every alarm is a config subentry with its own device, so the subentry ID is both the
-    device identifier and the stable half of the unique ID.
+    Every alarm's entities live on the integration's single device, named after the
+    alarm through the `alarm_name` translation placeholder. The subentry ID stays the
+    stable half of the unique ID, so deleting and re-adding an alarm still produces
+    fresh entities.
     """
 
     _attr_has_entity_name = True
@@ -34,9 +36,12 @@ class SunriseAlarmEntity(CoordinatorEntity[SunriseAlarmDataUpdateCoordinator]):
         self.entity_description = entity_description
         self._subentry_id = subentry.subentry_id
         self._attr_unique_id = f"{subentry.subentry_id}_{entity_description.key}"
+        self._attr_translation_placeholders = {"alarm_name": subentry.title}
+
+        entry = coordinator.config_entry
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, subentry.subentry_id)},
-            name=subentry.title,
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title,
             manufacturer=MANUFACTURER,
             entry_type=DeviceEntryType.SERVICE,
         )

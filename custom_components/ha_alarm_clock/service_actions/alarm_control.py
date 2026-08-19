@@ -32,36 +32,37 @@ def _async_resolve(hass: HomeAssistant, call: ServiceCall) -> list[tuple[AlarmSc
     """
     Turn the targeted devices into the alarms behind them.
 
+    All alarms share the integration's single device, so a targeted device resolves to
+    every alarm of its entry. The scheduler ignores alarms that are not in a wake-up,
+    which leaves the call acting on whichever alarm is actually ringing or snoozed.
+
     Returns:
-        One scheduler and subentry ID per targeted alarm.
+        One scheduler and subentry ID per alarm behind the targeted devices.
 
     Raises:
-        ServiceValidationError: If a targeted device is not an alarm of a loaded entry.
+        ServiceValidationError: If a targeted device does not belong to a loaded entry.
 
     """
     registry = dr.async_get(hass)
     resolved: list[tuple[AlarmScheduler, str]] = []
+    seen: set[str] = set()
 
     for device_id in call.data[ATTR_DEVICE_ID]:
         device = registry.async_get(device_id)
-        subentry_id = (
-            next(
-                (identifier for domain, identifier in device.identifiers if domain == DOMAIN),
-                None,
-            )
-            if device is not None
-            else None
-        )
         entry = _async_loaded_entry(hass, device) if device is not None else None
 
-        if subentry_id is None or entry is None:
+        if entry is None:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="alarm_not_found",
                 translation_placeholders={"target": device_id},
             )
 
-        resolved.append((entry.runtime_data.scheduler, subentry_id))
+        if entry.entry_id in seen:
+            continue
+
+        seen.add(entry.entry_id)
+        resolved.extend((entry.runtime_data.scheduler, subentry_id) for subentry_id in entry.subentries)
 
     return resolved
 

@@ -28,7 +28,10 @@ from homeassistant.util import dt as dt_util
 
 ALARM_NAME = "Weekday"
 ALARM_LIGHT = "light.bedroom"
-ALARM_SLUG = "weekday"
+
+# Entity IDs are "<device> <alarm> <entity>": every alarm lives on the single
+# Sunrise Alarm device, and its name reaches the entity through a placeholder.
+ALARM_SLUG = "sunrise_alarm_weekday"
 
 RAMP_MINUTES = 15
 SNOOZE_MINUTES = 9

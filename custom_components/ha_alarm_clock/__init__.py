@@ -8,6 +8,7 @@ https://github.com/ahernandez1801/light-alarm
 from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 import homeassistant.helpers.config_validation as cv
 from homeassistant.loader import async_get_loaded_integration
 
@@ -80,6 +81,8 @@ async def async_setup_entry(
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    _async_remove_stale_registry_entries(hass, entry)
+
     scheduler.async_start()
     entry.async_on_unload(scheduler.async_stop)
     entry.async_on_unload(async_setup_action_listener(hass, scheduler))
@@ -122,3 +125,28 @@ async def async_update_listener(
 
     for subentry_id in entry.subentries:
         data.scheduler.async_reconfigure(subentry_id)
+
+
+def _async_remove_stale_registry_entries(
+    hass: HomeAssistant,
+    entry: SunriseAlarmConfigEntry,
+) -> None:
+    """
+    Drop registry entries that no live alarm backs.
+
+    Every entity sits on the entry's single shared device rather than on a device per
+    subentry, so deleting an alarm no longer cascades through the registry — its
+    entities, and any per-alarm device left over from an older version, are removed
+    here on the reload that follows.
+    """
+    live_prefixes = tuple(f"{subentry_id}_" for subentry_id in entry.subentries)
+
+    entity_registry = er.async_get(hass)
+    for entity_entry in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
+        if not entity_entry.unique_id.startswith(live_prefixes):
+            entity_registry.async_remove(entity_entry.entity_id)
+
+    device_registry = dr.async_get(hass)
+    for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id):
+        if (DOMAIN, entry.entry_id) not in device.identifiers:
+            device_registry.async_remove_device(device.id)

@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 
 from custom_components.ha_alarm_clock.const import (
     CONF_ALARM_TIME,
+    CONF_GATE_ENTITY,
+    CONF_GATE_STATE,
     CONF_LIGHTS,
     CONF_RAMP_MINUTES,
     CONF_SNOOZE_MINUTES,
@@ -15,6 +17,7 @@ from custom_components.ha_alarm_clock.const import (
     AlarmPhase,
 )
 from custom_components.ha_alarm_clock.utils.ramp import async_start_ramp, async_stop_ramp
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.event import async_track_point_in_time
@@ -191,8 +194,13 @@ class AlarmScheduler:
     async def _async_begin_ramp(self, subentry_id: str, _now: datetime, *, reset: bool = True) -> None:
         """Take the lights from dark to full, arriving there as the alarm rings."""
         if self._coordinator.async_any_active(excluding=subentry_id):
-            LOGGER.info("Skipping alarm %s: another alarm is already active", subentry_id)
-            self.async_rearm(subentry_id)
+            LOGGER.info("Skipping alarm %s for today: another alarm is already active", subentry_id)
+            self._async_skip_today(subentry_id)
+            return
+
+        if self._async_gate_blocks(subentry_id):
+            LOGGER.info("Skipping alarm %s for today: its gate entity is not in the required state", subentry_id)
+            self._async_skip_today(subentry_id)
             return
 
         ring_at = self._ring_at.get(subentry_id)
@@ -235,6 +243,50 @@ class AlarmScheduler:
             await self._async_begin_ramp(subentry_id, now, reset=False)
         else:
             self._async_arm(subentry_id, ring_at, state.phase)
+
+    @callback
+    def _async_skip_today(self, subentry_id: str) -> None:
+        """
+        Give up on today's cycle and arm the same time tomorrow.
+
+        Re-arming through `async_rearm` would schedule today's still-future ring again
+        and re-run this decision immediately, so a skip has to move a whole day.
+        """
+        ring_at = self._ring_at.get(subentry_id)
+        self._async_cancel(subentry_id)
+
+        if ring_at is None:
+            self.async_rearm(subentry_id)
+            return
+
+        self._async_arm(subentry_id, ring_at + timedelta(days=1), AlarmPhase.IDLE)
+
+    @callback
+    def _async_gate_blocks(self, subentry_id: str) -> bool:
+        """
+        Report whether the alarm's gate entity keeps it from firing today.
+
+        Returns:
+            True when a gate entity is configured, its state is known, and it is not in
+            the required state. A missing or unavailable gate never blocks — a broken
+            presence tracker must not silently cancel a wake-up.
+
+        """
+        subentry = self._async_subentry(subentry_id)
+        if subentry is None:
+            return False
+
+        entity_id = subentry.data.get(CONF_GATE_ENTITY)
+        required = str(subentry.data.get(CONF_GATE_STATE, "")).strip()
+        if not entity_id or not required:
+            return False
+
+        state = self._hass.states.get(entity_id)
+        if state is None or state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+            LOGGER.warning("Alarm %s gate entity %s is unavailable; firing anyway", subentry_id, entity_id)
+            return False
+
+        return state.state != required
 
     @callback
     def _async_schedule(

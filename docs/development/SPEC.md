@@ -64,7 +64,7 @@ user's decision, not this integration's.
 
 | Manifest key          | Value        | Why                                                                   |
 | --------------------- | ------------ | --------------------------------------------------------------------- |
-| `integration_type`    | `helper`     | Values are produced from what Home Assistant already has, not fetched |
+| `integration_type`    | `service`    | Listed under Devices & Services rather than Helpers, where users look |
 | `iot_class`           | `calculated` | The source is the clock plus the alarm configuration                  |
 | `single_config_entry` | `true`       | Alarms are subentries of one entry, not entries of their own          |
 | `requirements`        | none         | No API client, no third-party library                                 |
@@ -73,18 +73,21 @@ There is no `api/` package, no credentials, no reauth flow, and no `ConfigEntryN
 
 ---
 
-## 4. Structure — one integration, one device per alarm
+## 4. Structure — one integration, one shared device
 
 ```text
-Config entry "Sunrise Alarm"
-├── Subentry "Weekday"   → device → its own time, switches, buttons, sensors
-├── Subentry "Weekend"   → device → …
-└── Subentry "Guest room" → device → …
+Config entry "Sunrise Alarm" → one device
+├── Subentry "Weekday"    → its own time, switches, buttons, sensors — named "Weekday …"
+├── Subentry "Weekend"    → …
+└── Subentry "Guest room" → …
 ```
 
-Each alarm is a config subentry owning exactly one device. Adding an alarm is **Add alarm** on the entry, not a second
-setup flow. Entity unique IDs are `{subentry_id}_{key}`, so deleting and re-adding an alarm produces fresh entities
-rather than resurrecting an old alarm's history.
+Each alarm is a config subentry. Every entity sits on the entry's single device, and carries its alarm's name through
+the `alarm_name` translation placeholder, so the device page reads as a list of alarms. Adding an alarm is **Add
+alarm** on the entry, not a second setup flow. Entity unique IDs are `{subentry_id}_{key}`, so deleting and re-adding
+an alarm produces fresh entities rather than resurrecting an old alarm's history. Because entities are not registered
+per subentry, deleting an alarm no longer cascades through a device — the reload that follows removes its registry
+entries instead.
 
 ### Layering
 
@@ -136,6 +139,10 @@ one-time alarm disarms itself here; otherwise it re-arms for the next day.
 **One at a time.** An alarm whose sunrise is due while another is ramping, ringing or snoozed is skipped for that day.
 Whichever timer Home Assistant runs first wins.
 
+**Presence gate.** An alarm may name a gate entity and a required state. At sunrise time, when the gate entity's state
+is known and not the required one, the alarm skips that day. A missing or unavailable gate never blocks — a broken
+presence tracker must not silently cancel a wake-up.
+
 ---
 
 ## 6. Configuration
@@ -150,6 +157,8 @@ Held in the subentry. The dialog shows three fields; everything with a sensible 
 | `ramp_minutes`   | Advanced | 1–60 minutes              | `15`     |
 | `snooze_minutes` | Advanced | 1–60 minutes              | `9`      |
 | `notify_targets` | Advanced | `mobile_app_*` services   | none     |
+| `gate_entity`    | Advanced | any entity, optional      | none     |
+| `gate_state`     | Advanced | text                      | `home`   |
 | _audio keys_     | Sound    | see [§9](#9-audio-design) | none     |
 
 The Sound and Advanced sections only offer what the installation actually has: notification targets appear only when
@@ -172,7 +181,8 @@ alarm that is _currently_ ramping or ringing is not re-armed — the new time ap
 
 ## 7. Entities
 
-One set per alarm, on that alarm's device.
+One set per alarm, all on the integration's single device; `<alarm>` in the IDs below is the device slug plus the
+alarm's name, for example `switch.sunrise_alarm_weekday_alarm`.
 
 | Entity                          | Category | Purpose                    |
 | ------------------------------- | -------- | -------------------------- |
@@ -188,10 +198,10 @@ One set per alarm, on that alarm's device.
 
 ### Service actions
 
-| Action                   | Target | Notes                                               |
-| ------------------------ | ------ | --------------------------------------------------- |
-| `ha_alarm_clock.snooze`  | device | Same code path as the button; for a physical button |
-| `ha_alarm_clock.dismiss` | device | Same                                                |
+| Action                   | Target | Notes                                                              |
+| ------------------------ | ------ | ------------------------------------------------------------------ |
+| `ha_alarm_clock.snooze`  | device | Acts on whichever alarm is in a wake-up; idle alarms ignore it     |
+| `ha_alarm_clock.dismiss` | device | Same code path as the buttons; for a physical button or an NFC tag |
 
 ---
 

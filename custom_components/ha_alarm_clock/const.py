@@ -21,6 +21,8 @@ CONF_AUDIO_USE_MUSIC_ASSISTANT = "audio_use_music_assistant"
 CONF_AUDIO_VOLUME_END = "audio_volume_end"
 CONF_AUDIO_VOLUME_MINUTES = "audio_volume_minutes"
 CONF_AUDIO_VOLUME_START = "audio_volume_start"
+CONF_GATE_ENTITY = "gate_entity"
+CONF_GATE_STATE = "gate_state"
 CONF_LIGHTS = "lights"
 CONF_NOTIFY_TARGETS = "notify_targets"
 CONF_PHONE_CRITICAL_SOUND = "phone_critical_sound"
@@ -28,6 +30,7 @@ CONF_RAMP_MINUTES = "ramp_minutes"
 CONF_SNOOZE_MINUTES = "snooze_minutes"
 
 DEFAULT_AUDIO_VOLUME_END = 60
+DEFAULT_GATE_STATE = "home"
 DEFAULT_AUDIO_VOLUME_MINUTES = 2
 DEFAULT_AUDIO_VOLUME_START = 20
 DEFAULT_RAMP_MINUTES = 15
