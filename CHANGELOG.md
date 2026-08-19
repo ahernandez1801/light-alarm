@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/ahernandez1801/light-alarm/compare/v0.2.1...v0.2.2) (2026-08-19)
+
+
+### Bug Fixes
+
+* **audio:** send Music Assistant playback to its own players only ([9d85a7b](https://github.com/ahernandez1801/light-alarm/commit/9d85a7b96e8293de7132bdaefb2257bce6ea1df0))
+* **audio:** send Music Assistant playback to its own players only ([da77628](https://github.com/ahernandez1801/light-alarm/commit/da776288f07d1fb2917c530014226627379ab9b5))
+
 ## [0.2.1](https://github.com/ahernandez1801/light-alarm/compare/v0.2.0...v0.2.1) (2026-08-19)
 
 
