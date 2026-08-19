@@ -9,6 +9,8 @@ never the ringing state, the notifications or the buttons.
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
+import voluptuous as vol
+
 from custom_components.ha_alarm_clock.const import (
     CONF_AUDIO_MEDIA,
     CONF_AUDIO_PLAYLIST,
@@ -24,8 +26,10 @@ from custom_components.ha_alarm_clock.const import (
     LOGGER,
     MUSIC_ASSISTANT_DOMAIN,
     MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST,
+    MUSIC_ASSISTANT_MEDIA_TYPES,
     MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA,
 )
+from custom_components.ha_alarm_clock.utils.music_assistant import async_music_assistant_targets
 from homeassistant.components.media_player import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
@@ -129,8 +133,25 @@ class AlarmAudio:
                 "falling back to media_player.play_media",
             )
 
-        if playlist and music_assistant_available:
-            await self._async_play_music_assistant(targets, playlist, MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST, config)
+        music_assistant_targets = (
+            async_music_assistant_targets(self._hass, targets) if music_assistant_available else []
+        )
+
+        if use_music_assistant and music_assistant_available and not music_assistant_targets:
+            LOGGER.warning(
+                "None of the speakers of this alarm (%s) are Music Assistant players, and "
+                "music_assistant.play_media only reaches its own players; pick the Music "
+                "Assistant copy of the speaker in the alarm's Sound section",
+                ", ".join(targets),
+            )
+
+        if playlist and music_assistant_targets:
+            await self._async_play_music_assistant(
+                music_assistant_targets,
+                playlist,
+                MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST,
+                config,
+            )
             return
 
         content_id = (media or {}).get(ATTR_MEDIA_CONTENT_ID, "")
@@ -138,8 +159,8 @@ class AlarmAudio:
         if not content_id:
             return
 
-        if use_music_assistant and music_assistant_available:
-            await self._async_play_music_assistant(targets, content_id, content_type, config)
+        if use_music_assistant and music_assistant_targets:
+            await self._async_play_music_assistant(music_assistant_targets, content_id, content_type, config)
             return
 
         await self._async_call_media(
@@ -159,16 +180,16 @@ class AlarmAudio:
         config: dict[str, Any],
     ) -> None:
         """Start playback of one item through Music Assistant."""
-        await self._async_call(
-            MUSIC_ASSISTANT_DOMAIN,
-            MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA,
-            {
-                ATTR_ENTITY_ID: list(targets),
-                ATTR_MA_MEDIA_ID: media_id,
-                ATTR_MA_MEDIA_TYPE: media_type,
-                ATTR_MA_RADIO_MODE: bool(config.get(CONF_AUDIO_RADIO_MODE, False)),
-            },
-        )
+        data = {
+            ATTR_ENTITY_ID: list(targets),
+            ATTR_MA_MEDIA_ID: media_id,
+            ATTR_MA_RADIO_MODE: bool(config.get(CONF_AUDIO_RADIO_MODE, False)),
+        }
+
+        if media_type in MUSIC_ASSISTANT_MEDIA_TYPES:
+            data[ATTR_MA_MEDIA_TYPE] = media_type
+
+        await self._async_call(MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA, data)
 
     @callback
     def _async_start_volume_ramp(
@@ -221,7 +242,7 @@ class AlarmAudio:
         """Call one service, treating its failure as non-fatal."""
         try:
             await self._hass.services.async_call(domain, service, data, blocking=True)
-        except HomeAssistantError as exception:
+        except (HomeAssistantError, vol.Invalid) as exception:
             LOGGER.warning("Could not call %s.%s for the alarm audio: %s", domain, service, exception)
 
     @callback

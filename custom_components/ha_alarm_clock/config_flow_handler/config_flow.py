@@ -9,6 +9,7 @@ from homeassistant.core import callback
 
 from .schemas import async_get_alarm_schema, flatten_alarm_input
 from .subentry_flow import AlarmSubentryFlowHandler
+from .validators import async_validate_alarm_audio
 
 
 class SunriseAlarmConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -42,22 +43,31 @@ class SunriseAlarmConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             The form, or the created config entry.
 
         """
+        errors: dict[str, str] = {}
+
         if user_input is not None:
             alarm = flatten_alarm_input(user_input)
-            return self.async_create_entry(
-                title=DEFAULT_ENTRY_TITLE,
-                data={},
-                subentries=[
-                    config_entries.ConfigSubentryData(
-                        data=alarm,
-                        subentry_type=SUBENTRY_TYPE_ALARM,
-                        title=alarm[CONF_NAME],
-                        unique_id=None,
-                    ),
-                ],
-            )
+            errors = async_validate_alarm_audio(self.hass, alarm)
 
-        return self.async_show_form(step_id="user", data_schema=await async_get_alarm_schema(self.hass))
+            if not errors:
+                return self.async_create_entry(
+                    title=DEFAULT_ENTRY_TITLE,
+                    data={},
+                    subentries=[
+                        config_entries.ConfigSubentryData(
+                            data=alarm,
+                            subentry_type=SUBENTRY_TYPE_ALARM,
+                            title=alarm[CONF_NAME],
+                            unique_id=None,
+                        ),
+                    ],
+                )
+
+        schema = await async_get_alarm_schema(self.hass)
+        if user_input is not None:
+            schema = self.add_suggested_values_to_schema(schema, user_input)
+
+        return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
 
 
 __all__ = ["SunriseAlarmConfigFlowHandler"]

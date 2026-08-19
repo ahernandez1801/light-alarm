@@ -32,7 +32,7 @@
             "data_description": {
               "audio_targets": "The media players that ring when the alarm does.",
               "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
-              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. Pick one from the list, or type any Music Assistant URI.",
+              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. The speakers above must be the Music Assistant copies of your players — Music Assistant can only play through its own. Pick one from the list, or type any Music Assistant URI.",
               "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
               "audio_radio_mode": "Keep playing similar music once the selection ends.",
               "audio_volume_start": "The volume the speakers are set to just before playback starts.",
@@ -57,6 +57,9 @@
           }
         }
       }
+    },
+    "error": {
+      "playlist_needs_music_assistant_player": "Music Assistant can only play through its own media players. None of the speakers you picked are Music Assistant players, so the playlist would stay silent. Add the Music Assistant copy of your speaker, or clear the playlist."
     },
     "abort": {
       "single_instance_allowed": "Sunrise Alarm is already set up. Add another alarm to the existing entry instead."
@@ -102,7 +105,7 @@
               "data_description": {
                 "audio_targets": "The media players that ring when the alarm does.",
                 "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
-              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. Pick one from the list, or type any Music Assistant URI.",
+              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. The speakers above must be the Music Assistant copies of your players — Music Assistant can only play through its own. Pick one from the list, or type any Music Assistant URI.",
                 "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
                 "audio_radio_mode": "Keep playing similar music once the selection ends.",
                 "audio_volume_start": "The volume the speakers are set to just before playback starts.",
@@ -162,7 +165,7 @@
               "data_description": {
                 "audio_targets": "The media players that ring when the alarm does.",
                 "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
-              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. Pick one from the list, or type any Music Assistant URI.",
+              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. The speakers above must be the Music Assistant copies of your players — Music Assistant can only play through its own. Pick one from the list, or type any Music Assistant URI.",
                 "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
                 "audio_radio_mode": "Keep playing similar music once the selection ends.",
                 "audio_volume_start": "The volume the speakers are set to just before playback starts.",
@@ -191,6 +194,9 @@
             }
           }
         }
+      },
+      "error": {
+        "playlist_needs_music_assistant_player": "Music Assistant can only play through its own media players. None of the speakers you picked are Music Assistant players, so the playlist would stay silent. Add the Music Assistant copy of your speaker, or clear the playlist."
       },
       "abort": {
         "reconfigure_successful": "The alarm was updated."
