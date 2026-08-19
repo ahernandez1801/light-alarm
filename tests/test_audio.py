@@ -15,6 +15,7 @@ from custom_components.ha_alarm_clock.const import (
     CONF_AUDIO_VOLUME_MINUTES,
     CONF_AUDIO_VOLUME_START,
     MUSIC_ASSISTANT_DOMAIN,
+    MUSIC_ASSISTANT_ENQUEUE_REPLACE,
     MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST,
     MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA,
 )
@@ -25,13 +26,16 @@ from homeassistant.components.media_player import (
     ATTR_MEDIA_VOLUME_LEVEL,
     DOMAIN as MEDIA_PLAYER_DOMAIN,
     SERVICE_PLAY_MEDIA,
+    MediaPlayerEntityFeature,
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
+    ATTR_SUPPORTED_FEATURES,
     SERVICE_MEDIA_STOP,
     SERVICE_TURN_OFF,
     SERVICE_TURN_ON,
     SERVICE_VOLUME_SET,
+    STATE_OFF,
     STATE_ON,
 )
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -42,6 +46,10 @@ from .conftest import AlarmCycle, AlarmEntities
 AUDIO_TARGET = "media_player.bedroom"
 AUDIO_MEDIA = {
     ATTR_MEDIA_CONTENT_ID: "media-source://media_source/local/wake.mp3",
+    ATTR_MEDIA_CONTENT_TYPE: "music",
+}
+AUDIO_LIBRARY_MEDIA = {
+    ATTR_MEDIA_CONTENT_ID: "library://track/7",
     ATTR_MEDIA_CONTENT_TYPE: "music",
 }
 AUDIO_PLAYLIST = "library://playlist/12"
@@ -109,6 +117,7 @@ async def test_music_assistant_path(
         {
             **audio_data,
             CONF_AUDIO_TARGETS: [music_assistant_player],
+            CONF_AUDIO_MEDIA: AUDIO_LIBRARY_MEDIA,
             CONF_AUDIO_USE_MUSIC_ASSISTANT: True,
             CONF_AUDIO_RADIO_MODE: True,
         },
@@ -118,8 +127,9 @@ async def test_music_assistant_path(
     assert play_media == []
     assert len(ma_play) == 1
     assert ma_play[0].data[ATTR_ENTITY_ID] == [music_assistant_player]
-    assert ma_play[0].data["media_id"] == AUDIO_MEDIA[ATTR_MEDIA_CONTENT_ID]
+    assert ma_play[0].data["media_id"] == AUDIO_LIBRARY_MEDIA[ATTR_MEDIA_CONTENT_ID]
     assert ma_play[0].data["radio_mode"] is True
+    assert ma_play[0].data["enqueue"] == MUSIC_ASSISTANT_ENQUEUE_REPLACE
 
 
 async def test_playlist_plays_through_music_assistant(
@@ -215,6 +225,7 @@ async def test_browser_media_type_is_dropped_for_music_assistant(
         {
             **audio_data,
             CONF_AUDIO_TARGETS: [music_assistant_player],
+            CONF_AUDIO_MEDIA: AUDIO_LIBRARY_MEDIA,
             CONF_AUDIO_USE_MUSIC_ASSISTANT: True,
         },
     )
@@ -222,7 +233,69 @@ async def test_browser_media_type_is_dropped_for_music_assistant(
 
     assert len(ma_play) == 1
     assert "media_type" not in ma_play[0].data
-    assert ma_play[0].data["media_id"] == AUDIO_MEDIA[ATTR_MEDIA_CONTENT_ID]
+    assert "radio_mode" not in ma_play[0].data
+    assert ma_play[0].data["media_id"] == AUDIO_LIBRARY_MEDIA[ATTR_MEDIA_CONTENT_ID]
+
+
+async def test_media_source_pick_bypasses_the_music_assistant_action(
+    hass: HomeAssistant,
+    audio_data: dict[str, Any],
+    setup_with_data: Any,
+    cycle: AlarmCycle,
+    music_assistant_player: str,
+) -> None:
+    """A media browser pick plays through the player's own play_media, which resolves it."""
+    async_mock_service(hass, LIGHT_DOMAIN, SERVICE_TURN_ON)
+    async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_VOLUME_SET)
+    ma_play = async_mock_service(hass, MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
+    play_media = async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_PLAY_MEDIA)
+
+    await setup_with_data(
+        {
+            **audio_data,
+            CONF_AUDIO_TARGETS: [music_assistant_player],
+            CONF_AUDIO_USE_MUSIC_ASSISTANT: True,
+        },
+    )
+    await cycle.reach_ringing()
+
+    assert ma_play == []
+    assert len(play_media) == 1
+    assert play_media[0].data[ATTR_ENTITY_ID] == [music_assistant_player]
+    assert play_media[0].data[ATTR_MEDIA_CONTENT_ID] == AUDIO_MEDIA[ATTR_MEDIA_CONTENT_ID]
+
+
+async def test_a_speaker_that_is_off_is_powered_on_first(
+    hass: HomeAssistant,
+    audio_data: dict[str, Any],
+    setup_with_data: Any,
+    cycle: AlarmCycle,
+    music_assistant_player: str,
+) -> None:
+    """A speaker switched off the night before is turned on before anything is sent to it."""
+    async_mock_service(hass, LIGHT_DOMAIN, SERVICE_TURN_ON)
+    async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_VOLUME_SET)
+    async_mock_service(hass, MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
+    turn_on = async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_TURN_ON)
+
+    hass.states.async_set(
+        music_assistant_player,
+        STATE_OFF,
+        {ATTR_SUPPORTED_FEATURES: MediaPlayerEntityFeature.TURN_ON},
+    )
+
+    await setup_with_data(
+        {
+            **audio_data,
+            CONF_AUDIO_TARGETS: [music_assistant_player],
+            CONF_AUDIO_MEDIA: AUDIO_LIBRARY_MEDIA,
+            CONF_AUDIO_USE_MUSIC_ASSISTANT: True,
+        },
+    )
+    await cycle.reach_ringing()
+
+    assert len(turn_on) == 1
+    assert turn_on[0].data[ATTR_ENTITY_ID] == [music_assistant_player]
 
 
 async def test_playlist_without_music_assistant_falls_back(

@@ -24,7 +24,9 @@ from custom_components.ha_alarm_clock.const import (
     DEFAULT_AUDIO_VOLUME_MINUTES,
     DEFAULT_AUDIO_VOLUME_START,
     LOGGER,
+    MEDIA_SOURCE_URI_PREFIX,
     MUSIC_ASSISTANT_DOMAIN,
+    MUSIC_ASSISTANT_ENQUEUE_REPLACE,
     MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST,
     MUSIC_ASSISTANT_MEDIA_TYPES,
     MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA,
@@ -36,8 +38,17 @@ from homeassistant.components.media_player import (
     ATTR_MEDIA_VOLUME_LEVEL,
     DOMAIN as MEDIA_PLAYER_DOMAIN,
     SERVICE_PLAY_MEDIA,
+    MediaPlayerEntityFeature,
 )
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_MEDIA_STOP, SERVICE_TURN_OFF, SERVICE_VOLUME_SET
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    ATTR_SUPPORTED_FEATURES,
+    SERVICE_MEDIA_STOP,
+    SERVICE_TURN_OFF,
+    SERVICE_TURN_ON,
+    SERVICE_VOLUME_SET,
+    STATE_OFF,
+)
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.event import async_track_time_interval
@@ -50,6 +61,7 @@ if TYPE_CHECKING:
     from custom_components.ha_alarm_clock.coordinator import SunriseAlarmDataUpdateCoordinator
     from homeassistant.core import CALLBACK_TYPE, HomeAssistant
 
+ATTR_MA_ENQUEUE = "enqueue"
 ATTR_MA_MEDIA_ID = "media_id"
 ATTR_MA_MEDIA_TYPE = "media_type"
 ATTR_MA_RADIO_MODE = "radio_mode"
@@ -84,6 +96,7 @@ class AlarmAudio:
         end = int(config.get(CONF_AUDIO_VOLUME_END, DEFAULT_AUDIO_VOLUME_END))
         minutes = int(config.get(CONF_AUDIO_VOLUME_MINUTES, DEFAULT_AUDIO_VOLUME_MINUTES))
 
+        await self._async_turn_on(targets)
         await self._async_set_volume(targets, start)
         await self._async_play(targets, media, config)
         self._async_start_volume_ramp(subentry_id, targets, start, end, minutes)
@@ -154,12 +167,12 @@ class AlarmAudio:
             )
             return
 
-        content_id = (media or {}).get(ATTR_MEDIA_CONTENT_ID, "")
+        content_id = str((media or {}).get(ATTR_MEDIA_CONTENT_ID, ""))
         content_type = (media or {}).get(ATTR_MEDIA_CONTENT_TYPE, "")
         if not content_id:
             return
 
-        if use_music_assistant and music_assistant_targets:
+        if use_music_assistant and music_assistant_targets and not content_id.startswith(MEDIA_SOURCE_URI_PREFIX):
             await self._async_play_music_assistant(music_assistant_targets, content_id, content_type, config)
             return
 
@@ -179,12 +192,22 @@ class AlarmAudio:
         media_type: str,
         config: dict[str, Any],
     ) -> None:
-        """Start playback of one item through Music Assistant."""
-        data = {
+        """
+        Start playback of one item through Music Assistant.
+
+        `enqueue` is sent explicitly: left out, the item joins whatever the speaker's queue
+        still held from last night instead of taking it over, and an alarm that appends to a
+        paused queue never makes a sound. `radio_mode` is sent only when it is on, because
+        providers without dynamic tracks reject it outright.
+        """
+        data: dict[str, Any] = {
             ATTR_ENTITY_ID: list(targets),
             ATTR_MA_MEDIA_ID: media_id,
-            ATTR_MA_RADIO_MODE: bool(config.get(CONF_AUDIO_RADIO_MODE, False)),
+            ATTR_MA_ENQUEUE: MUSIC_ASSISTANT_ENQUEUE_REPLACE,
         }
+
+        if config.get(CONF_AUDIO_RADIO_MODE, False):
+            data[ATTR_MA_RADIO_MODE] = True
 
         if media_type in MUSIC_ASSISTANT_MEDIA_TYPES:
             data[ATTR_MA_MEDIA_TYPE] = media_type
@@ -227,6 +250,25 @@ class AlarmAudio:
             timedelta(seconds=VOLUME_RAMP_STEP_SECONDS),
         )
 
+    async def _async_turn_on(self, targets: Sequence[str]) -> None:
+        """
+        Power on the speakers that are off, before anything is sent to them.
+
+        A Music Assistant player's power is virtual, and a powered-off one drops the volume
+        and playback commands it is given without failing, so an alarm aimed at a speaker
+        that was switched off the night before stays silent.
+        """
+        powered_off = [
+            entity_id
+            for entity_id in targets
+            if (state := self._hass.states.get(entity_id)) is not None
+            and state.state == STATE_OFF
+            and int(state.attributes.get(ATTR_SUPPORTED_FEATURES) or 0) & MediaPlayerEntityFeature.TURN_ON
+        ]
+
+        if powered_off:
+            await self._async_call_media(SERVICE_TURN_ON, {ATTR_ENTITY_ID: powered_off})
+
     async def _async_set_volume(self, targets: Sequence[str], percent: int) -> None:
         """Set every target to one volume percentage."""
         await self._async_call_media(
@@ -240,10 +282,12 @@ class AlarmAudio:
 
     async def _async_call(self, domain: str, service: str, data: dict[str, Any]) -> None:
         """Call one service, treating its failure as non-fatal."""
+        LOGGER.debug("Alarm audio calling %s.%s with %s", domain, service, data)
+
         try:
             await self._hass.services.async_call(domain, service, data, blocking=True)
         except (HomeAssistantError, vol.Invalid) as exception:
-            LOGGER.warning("Could not call %s.%s for the alarm audio: %s", domain, service, exception)
+            LOGGER.warning("Could not call %s.%s with %s: %s", domain, service, data, exception)
 
     @callback
     def _async_config(self, subentry_id: str) -> dict[str, Any]:
