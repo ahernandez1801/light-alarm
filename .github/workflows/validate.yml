@@ -35,12 +35,14 @@ jobs:
   hacs: # https://github.com/hacs/action
     name: HACS validation
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # HACS reads the repository's releases through the API
     steps:
       - name: Run HACS validation
         uses: hacs/action@d556e736723344f83838d08488c983a15381059a # 22.5.0
         with:
           category: integration
-          gh_token: ${{ secrets.GITHUB_TOKEN }} 
+          gh_token: ${{ secrets.GITHUB_TOKEN }}
           # Remove this 'ignore' key when you have added brand images for your integration
           # https://developers.home-assistant.io/docs/creating_integration_file_structure/#brand-images---brand
           ignore: brands
