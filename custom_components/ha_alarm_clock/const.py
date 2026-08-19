@@ -9,12 +9,12 @@ DOMAIN = "ha_alarm_clock"
 
 SUBENTRY_TYPE_ALARM = "alarm"
 SECTION_ADVANCED = "advanced"
-SECTION_SOUND = "sound"
 DEFAULT_ENTRY_TITLE = "Sunrise Alarm"
 MANUFACTURER = "Sunrise Alarm"
 
 CONF_ALARM_TIME = "alarm_time"
 CONF_AUDIO_MEDIA = "audio_media"
+CONF_AUDIO_MODE = "audio_mode"
 CONF_AUDIO_PLAYLIST = "audio_playlist"
 CONF_AUDIO_RADIO_MODE = "audio_radio_mode"
 CONF_AUDIO_TARGETS = "audio_targets"
@@ -29,6 +29,10 @@ CONF_NOTIFY_TARGETS = "notify_targets"
 CONF_PHONE_CRITICAL_SOUND = "phone_critical_sound"
 CONF_RAMP_MINUTES = "ramp_minutes"
 CONF_SNOOZE_MINUTES = "snooze_minutes"
+
+AUDIO_MODE_MUSIC_ASSISTANT = "music_assistant"
+AUDIO_MODE_NONE = "none"
+AUDIO_MODE_SPEAKER = "speaker"
 
 DEFAULT_AUDIO_VOLUME_END = 60
 DEFAULT_GATE_STATE = "home"

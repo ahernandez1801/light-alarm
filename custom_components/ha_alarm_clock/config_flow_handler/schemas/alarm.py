@@ -1,4 +1,11 @@
-"""Voluptuous schema for the alarm dialog, shared by setup, add and reconfigure."""
+"""
+Voluptuous schemas for the alarm dialog, shared by setup, add and reconfigure.
+
+The dialog is two steps. The first collects the alarm itself and a choice of how it
+sounds; the second collects the sound settings for that choice, so a Music Assistant
+alarm is only ever offered Music Assistant speakers and its own library, never the
+media browser that would hand back an unplayable `media-source://` id.
+"""
 
 import asyncio
 from typing import TYPE_CHECKING, Any
@@ -6,8 +13,12 @@ from typing import TYPE_CHECKING, Any
 import voluptuous as vol
 
 from custom_components.ha_alarm_clock.const import (
+    AUDIO_MODE_MUSIC_ASSISTANT,
+    AUDIO_MODE_NONE,
+    AUDIO_MODE_SPEAKER,
     CONF_ALARM_TIME,
     CONF_AUDIO_MEDIA,
+    CONF_AUDIO_MODE,
     CONF_AUDIO_PLAYLIST,
     CONF_AUDIO_RADIO_MODE,
     CONF_AUDIO_TARGETS,
@@ -39,7 +50,6 @@ from custom_components.ha_alarm_clock.const import (
     NOTIFY_DOMAIN,
     NOTIFY_SERVICE_PREFIX,
     SECTION_ADVANCED,
-    SECTION_SOUND,
 )
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
@@ -68,6 +78,7 @@ ADVANCED_KEYS = (
     CONF_RAMP_MINUTES,
     CONF_SNOOZE_MINUTES,
     CONF_NOTIFY_TARGETS,
+    CONF_PHONE_CRITICAL_SOUND,
     CONF_GATE_ENTITY,
     CONF_GATE_STATE,
 )
@@ -80,22 +91,27 @@ SOUND_KEYS = (
     CONF_AUDIO_VOLUME_START,
     CONF_AUDIO_VOLUME_END,
     CONF_AUDIO_VOLUME_MINUTES,
-    CONF_PHONE_CRITICAL_SOUND,
 )
-SECTIONS = (SECTION_ADVANCED, SECTION_SOUND)
+SECTIONS = (SECTION_ADVANCED,)
 
 
-async def async_get_alarm_schema(hass: HomeAssistant) -> vol.Schema:
+def async_get_alarm_schema(hass: HomeAssistant) -> vol.Schema:
     """
-    Return the schema describing one alarm.
+    Return the schema for the first step: the alarm itself and how it sounds.
 
-    Name, time and lights are the whole dialog; everything that has a sensible default
-    sits in a collapsed section, so adding an alarm is three fields.
+    Name, time and lights are the whole dialog; the sound choice decides whether a
+    second step follows, and everything with a sensible default sits in a collapsed
+    section.
 
     Returns:
         The schema for the alarm form.
 
     """
+    music_assistant = hass.services.has_service(MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
+    modes = [AUDIO_MODE_NONE, AUDIO_MODE_SPEAKER]
+    if music_assistant:
+        modes.append(AUDIO_MODE_MUSIC_ASSISTANT)
+
     return vol.Schema(
         {
             vol.Required(CONF_NAME): selector.TextSelector(),
@@ -103,13 +119,71 @@ async def async_get_alarm_schema(hass: HomeAssistant) -> vol.Schema:
             vol.Required(CONF_LIGHTS): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=LIGHT_DOMAIN, multiple=True),
             ),
-            vol.Required(SECTION_SOUND): section(
-                _sound_schema(hass, await _async_music_assistant_playlists(hass)),
-                {"collapsed": True},
+            vol.Required(CONF_AUDIO_MODE, default=AUDIO_MODE_NONE): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=modes,
+                    translation_key=CONF_AUDIO_MODE,
+                    mode=selector.SelectSelectorMode.LIST,
+                ),
             ),
             vol.Required(SECTION_ADVANCED): section(_advanced_schema(hass), {"collapsed": True}),
         },
     )
+
+
+async def async_get_sound_schema(hass: HomeAssistant, mode: str) -> vol.Schema:
+    """
+    Return the schema for the second step: the sound settings of one mode.
+
+    A Music Assistant alarm picks from its own playlists and is only offered the media
+    players Music Assistant itself created, because `music_assistant.play_media` acts on
+    no others. A plain speaker alarm browses media the way the media player would.
+
+    Returns:
+        The schema for the sound form.
+
+    """
+    fields: dict[Any, Any]
+
+    if mode == AUDIO_MODE_MUSIC_ASSISTANT:
+        fields = {
+            vol.Required(CONF_AUDIO_PLAYLIST): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=await _async_music_assistant_playlists(hass),
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                    custom_value=True,
+                    sort=True,
+                ),
+            ),
+            vol.Required(CONF_AUDIO_TARGETS): selector.EntitySelector(
+                selector.EntitySelectorConfig(
+                    domain=MEDIA_PLAYER_DOMAIN,
+                    integration=MUSIC_ASSISTANT_DOMAIN,
+                    multiple=True,
+                ),
+            ),
+            vol.Required(CONF_AUDIO_RADIO_MODE, default=False): selector.BooleanSelector(),
+        }
+    else:
+        fields = {
+            vol.Required(CONF_AUDIO_TARGETS): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=MEDIA_PLAYER_DOMAIN, multiple=True),
+            ),
+            vol.Required(CONF_AUDIO_MEDIA): selector.MediaSelector(),
+        }
+
+    fields.update(
+        {
+            vol.Required(CONF_AUDIO_VOLUME_START, default=DEFAULT_AUDIO_VOLUME_START): _percentage_selector(),
+            vol.Required(CONF_AUDIO_VOLUME_END, default=DEFAULT_AUDIO_VOLUME_END): _percentage_selector(),
+            vol.Required(CONF_AUDIO_VOLUME_MINUTES, default=DEFAULT_AUDIO_VOLUME_MINUTES): _minutes_selector(
+                MAX_AUDIO_VOLUME_MINUTES,
+                minimum=0,
+            ),
+        },
+    )
+
+    return vol.Schema(fields)
 
 
 def flatten_alarm_input(user_input: dict[str, Any]) -> dict[str, Any]:
@@ -127,20 +201,79 @@ def flatten_alarm_input(user_input: dict[str, Any]) -> dict[str, Any]:
     return flattened
 
 
-def to_form_data(data: dict[str, Any]) -> dict[str, Any]:
+def merge_alarm(main: dict[str, Any], sound: dict[str, Any] | None) -> dict[str, Any]:
     """
-    Shape a stored alarm the way the form expects it.
+    Combine the two steps into the alarm configuration that gets stored.
+
+    The mode itself is not stored — it is derived from what is — and the keys of the
+    modes not chosen are dropped, so switching an alarm from Music Assistant to a plain
+    speaker leaves no stale playlist behind.
 
     Returns:
-        The alarm configuration with its section keys nested in their sections.
+        The flat alarm configuration.
+
+    """
+    mode = main.get(CONF_AUDIO_MODE, AUDIO_MODE_NONE)
+    alarm = {key: value for key, value in flatten_alarm_input(main).items() if key != CONF_AUDIO_MODE}
+
+    if mode == AUDIO_MODE_NONE or not sound:
+        return alarm
+
+    alarm.update(sound)
+    alarm[CONF_AUDIO_USE_MUSIC_ASSISTANT] = mode == AUDIO_MODE_MUSIC_ASSISTANT
+
+    if mode == AUDIO_MODE_MUSIC_ASSISTANT:
+        alarm.pop(CONF_AUDIO_MEDIA, None)
+    else:
+        alarm.pop(CONF_AUDIO_PLAYLIST, None)
+        alarm.pop(CONF_AUDIO_RADIO_MODE, None)
+
+    return alarm
+
+
+def audio_mode_of(data: dict[str, Any]) -> str:
+    """
+    Derive the sound mode of a stored alarm.
+
+    Returns:
+        The mode the sound step of a reconfigure should open in.
+
+    """
+    if data.get(CONF_AUDIO_PLAYLIST) or data.get(CONF_AUDIO_USE_MUSIC_ASSISTANT):
+        return AUDIO_MODE_MUSIC_ASSISTANT
+
+    if data.get(CONF_AUDIO_TARGETS):
+        return AUDIO_MODE_SPEAKER
+
+    return AUDIO_MODE_NONE
+
+
+def to_form_data(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Shape a stored alarm the way the first step's form expects it.
+
+    Returns:
+        The alarm configuration with the advanced keys nested in their section and the
+        derived sound mode filled in.
 
     """
     nested_keys = ADVANCED_KEYS + SOUND_KEYS
     return {
         **{key: value for key, value in data.items() if key not in nested_keys},
-        SECTION_SOUND: {key: data[key] for key in SOUND_KEYS if key in data},
+        CONF_AUDIO_MODE: data.get(CONF_AUDIO_MODE, audio_mode_of(data)),
         SECTION_ADVANCED: {key: data[key] for key in ADVANCED_KEYS if key in data},
     }
+
+
+def to_sound_form_data(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Shape a stored alarm the way the second step's form expects it.
+
+    Returns:
+        The sound settings of the alarm, without the derived Music Assistant toggle.
+
+    """
+    return {key: data[key] for key in SOUND_KEYS if key in data and key != CONF_AUDIO_USE_MUSIC_ASSISTANT}
 
 
 def _advanced_schema(hass: HomeAssistant) -> vol.Schema:
@@ -171,66 +304,11 @@ def _advanced_schema(hass: HomeAssistant) -> vol.Schema:
                         mode=selector.SelectSelectorMode.LIST,
                     ),
                 ),
+                vol.Required(CONF_PHONE_CRITICAL_SOUND, default=True): selector.BooleanSelector(),
             },
         )
 
     return schema
-
-
-def _sound_schema(hass: HomeAssistant, playlists: list[selector.SelectOptionDict]) -> vol.Schema:
-    """
-    Return the audio fields, offering only what the installation has.
-
-    The playlist picker and the Music Assistant toggles appear only when that integration
-    is installed, and the phone sound toggle only when a companion app is around to carry
-    it.
-
-    Returns:
-        The schema for the collapsed sound section.
-
-    """
-    music_assistant = hass.services.has_service(MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
-
-    fields: dict[Any, Any] = {
-        vol.Optional(CONF_AUDIO_TARGETS, default=[]): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=MEDIA_PLAYER_DOMAIN, multiple=True),
-        ),
-        vol.Optional(CONF_AUDIO_MEDIA): selector.MediaSelector(),
-    }
-
-    if music_assistant:
-        fields[vol.Optional(CONF_AUDIO_PLAYLIST)] = selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=playlists,
-                mode=selector.SelectSelectorMode.DROPDOWN,
-                custom_value=True,
-                sort=True,
-            ),
-        )
-
-    fields.update(
-        {
-            vol.Required(CONF_AUDIO_VOLUME_START, default=DEFAULT_AUDIO_VOLUME_START): _percentage_selector(),
-            vol.Required(CONF_AUDIO_VOLUME_END, default=DEFAULT_AUDIO_VOLUME_END): _percentage_selector(),
-            vol.Required(CONF_AUDIO_VOLUME_MINUTES, default=DEFAULT_AUDIO_VOLUME_MINUTES): _minutes_selector(
-                MAX_AUDIO_VOLUME_MINUTES,
-                minimum=0,
-            ),
-        },
-    )
-
-    if music_assistant:
-        fields.update(
-            {
-                vol.Required(CONF_AUDIO_USE_MUSIC_ASSISTANT, default=False): selector.BooleanSelector(),
-                vol.Required(CONF_AUDIO_RADIO_MODE, default=False): selector.BooleanSelector(),
-            },
-        )
-
-    if _notify_options(hass):
-        fields[vol.Required(CONF_PHONE_CRITICAL_SOUND, default=True)] = selector.BooleanSelector()
-
-    return vol.Schema(fields)
 
 
 async def _async_music_assistant_playlists(hass: HomeAssistant) -> list[selector.SelectOptionDict]:

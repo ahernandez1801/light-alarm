@@ -7,59 +7,64 @@
         "data": {
           "name": "Name",
           "alarm_time": "Alarm time",
-          "lights": "Lights"
+          "lights": "Lights",
+          "audio_mode": "Sound"
         },
         "data_description": {
           "name": "What to call this alarm, for example Weekday or Guest room.",
           "alarm_time": "The time the lights start fading up.",
-          "lights": "The lights this alarm brings up. They are set to their dimmest first, then taken to full."
+          "lights": "The lights this alarm brings up. They are set to their dimmest first, then taken to full.",
+          "audio_mode": "Whether the alarm plays music when it rings, and what plays it. The next page collects the details."
         },
         "sections": {
-          "sound": {
-            "name": "Sound",
-            "description": "Optional. Pick speakers and something to play, or leave the speakers empty for a silent, light-only alarm.",
-            "data": {
-              "audio_targets": "Speakers",
-              "audio_media": "What to play",
-              "audio_playlist": "Music Assistant playlist",
-              "audio_use_music_assistant": "Play through Music Assistant",
-              "audio_radio_mode": "Radio mode",
-              "audio_volume_start": "Starting volume",
-              "audio_volume_end": "Final volume",
-              "audio_volume_minutes": "Volume ramp length",
-              "phone_critical_sound": "Ring through silent mode"
-            },
-            "data_description": {
-              "audio_targets": "The media players that ring when the alarm does.",
-              "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
-              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. The speakers above must be the Music Assistant copies of your players — Music Assistant can only play through its own. Pick one from the list, or type any Music Assistant URI.",
-              "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
-              "audio_radio_mode": "Keep playing similar music once the selection ends.",
-              "audio_volume_start": "The volume the speakers are set to just before playback starts.",
-              "audio_volume_end": "The volume the ramp arrives at while the alarm rings.",
-              "audio_volume_minutes": "How long the volume takes to rise from starting to final, in minutes. Zero keeps the starting volume.",
-              "phone_critical_sound": "Let the phone notification sound even when the phone is muted or in Do Not Disturb. Applies to iPhones; on Android, set a sound on the notification channel in the companion app instead."
-            }
-          },
           "advanced": {
             "name": "Advanced",
             "description": "Sensible defaults are already filled in. Each of these also becomes an entity you can change from a dashboard.",
             "data": {
               "ramp_minutes": "Sunrise length",
               "snooze_minutes": "Snooze length",
-              "notify_targets": "Notify these phones"
+              "notify_targets": "Notify these phones",
+              "phone_critical_sound": "Ring through silent mode",
+              "gate_entity": "Only ring when",
+              "gate_state": "is in this state"
             },
             "data_description": {
               "ramp_minutes": "How long the lights take to reach full brightness, in minutes.",
               "snooze_minutes": "How long a snooze lasts before the sunrise starts again from dark.",
-              "notify_targets": "Companion app devices that get a Snooze/Dismiss notification while this alarm rings, re-sent every few minutes until you answer it. Leave empty to rely on the dashboard buttons and your own physical button."
+              "notify_targets": "Companion app devices that get a Snooze/Dismiss notification while this alarm rings, re-sent every few minutes until you answer it. Leave empty to rely on the dashboard buttons and your own physical button.",
+              "phone_critical_sound": "Let the phone notification sound even when the phone is muted or in Do Not Disturb. Applies to iPhones; on Android, set a sound on the notification channel in the companion app instead.",
+              "gate_entity": "An entity checked just before the alarm starts — a person, a phone, a workday sensor. Leave empty to always ring.",
+              "gate_state": "The state that entity must be in for the alarm to ring, for example home or on."
             }
           }
+        }
+      },
+      "sound": {
+        "title": "Sound",
+        "description": "How this alarm sounds when it rings. The volume starts low and rises while it plays.",
+        "data": {
+          "audio_playlist": "What to play",
+          "audio_targets": "Speakers",
+          "audio_media": "What to play",
+          "audio_radio_mode": "Radio mode",
+          "audio_volume_start": "Starting volume",
+          "audio_volume_end": "Final volume",
+          "audio_volume_minutes": "Volume ramp length"
+        },
+        "data_description": {
+          "audio_playlist": "A playlist from your Music Assistant library. You can also type anything Music Assistant can find — an artist, an album, a track, or a URI like spotify://playlist/….",
+          "audio_targets": "The speakers that ring when the alarm does. Only Music Assistant players are offered here, because Music Assistant can only play through its own.",
+          "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
+          "audio_radio_mode": "Keep playing similar music once the selection ends. Needs a music provider that can suggest tracks, such as Spotify or YouTube Music.",
+          "audio_volume_start": "The volume the speakers are set to just before playback starts.",
+          "audio_volume_end": "The volume the ramp arrives at while the alarm rings.",
+          "audio_volume_minutes": "How long the volume takes to rise from starting to final, in minutes. Zero keeps the starting volume."
         }
       }
     },
     "error": {
-      "playlist_needs_music_assistant_player": "Music Assistant can only play through its own media players. None of the speakers you picked are Music Assistant players, so the playlist would stay silent. Add the Music Assistant copy of your speaker, or clear the playlist."
+      "sound_needs_speaker": "Pick at least one speaker, or set the alarm's sound back to none.",
+      "playlist_needs_music_assistant_player": "Music Assistant can only play through its own media players. None of the speakers you picked are Music Assistant players, so nothing would play. Pick the Music Assistant copy of your speaker."
     },
     "abort": {
       "single_instance_allowed": "Sunrise Alarm is already set up. Add another alarm to the existing entry instead."
@@ -80,40 +85,16 @@
           "data": {
             "name": "Name",
             "alarm_time": "Alarm time",
-            "lights": "Lights"
+            "lights": "Lights",
+            "audio_mode": "Sound"
           },
           "data_description": {
             "name": "What to call this alarm, for example Weekday or Guest room.",
             "alarm_time": "The time the lights start fading up.",
-            "lights": "The lights this alarm brings up. They are set to their dimmest first, then taken to full."
+            "lights": "The lights this alarm brings up. They are set to their dimmest first, then taken to full.",
+            "audio_mode": "Whether the alarm plays music when it rings, and what plays it. The next page collects the details."
           },
           "sections": {
-            "sound": {
-              "name": "Sound",
-              "description": "Optional. Pick speakers and something to play, or leave the speakers empty for a silent, light-only alarm.",
-              "data": {
-                "audio_targets": "Speakers",
-                "audio_media": "What to play",
-              "audio_playlist": "Music Assistant playlist",
-                "audio_use_music_assistant": "Play through Music Assistant",
-                "audio_radio_mode": "Radio mode",
-                "audio_volume_start": "Starting volume",
-                "audio_volume_end": "Final volume",
-                "audio_volume_minutes": "Volume ramp length",
-                "phone_critical_sound": "Ring through silent mode"
-              },
-              "data_description": {
-                "audio_targets": "The media players that ring when the alarm does.",
-                "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
-              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. The speakers above must be the Music Assistant copies of your players — Music Assistant can only play through its own. Pick one from the list, or type any Music Assistant URI.",
-                "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
-                "audio_radio_mode": "Keep playing similar music once the selection ends.",
-                "audio_volume_start": "The volume the speakers are set to just before playback starts.",
-                "audio_volume_end": "The volume the ramp arrives at while the alarm rings.",
-                "audio_volume_minutes": "How long the volume takes to rise from starting to final, in minutes. Zero keeps the starting volume.",
-                "phone_critical_sound": "Let the phone notification sound even when the phone is muted or in Do Not Disturb. Applies to iPhones; on Android, set a sound on the notification channel in the companion app instead."
-              }
-            },
             "advanced": {
               "name": "Advanced",
               "description": "Sensible defaults are already filled in. Each of these also becomes an entity you can change from a dashboard.",
@@ -121,59 +102,37 @@
                 "ramp_minutes": "Sunrise length",
                 "snooze_minutes": "Snooze length",
                 "notify_targets": "Notify these phones",
-                "gate_entity": "Presence check",
-                "gate_state": "Required state"
+                "phone_critical_sound": "Ring through silent mode",
+                "gate_entity": "Only ring when",
+                "gate_state": "is in this state"
               },
               "data_description": {
                 "ramp_minutes": "How long the lights take to reach full brightness, in minutes.",
                 "snooze_minutes": "How long a snooze lasts before the sunrise starts again from dark.",
                 "notify_targets": "Companion app devices that get a Snooze/Dismiss notification while this alarm rings, re-sent every few minutes until you answer it. Leave empty to rely on the dashboard buttons and your own physical button.",
-                "gate_entity": "Optional. An entity that must be in the required state below for this alarm to fire — your person entity, for example. When it is in any other state, the alarm skips that day.",
-                "gate_state": "The state the presence check must be in for the alarm to fire, for example home or on. A presence check that is unavailable never blocks the alarm."
+                "phone_critical_sound": "Let the phone notification sound even when the phone is muted or in Do Not Disturb. Applies to iPhones; on Android, set a sound on the notification channel in the companion app instead.",
+                "gate_entity": "An entity checked just before the alarm starts — a person, a phone, a workday sensor. Leave empty to always ring.",
+                "gate_state": "The state that entity must be in for the alarm to ring, for example home or on."
               }
             }
           }
         },
         "reconfigure": {
           "title": "Edit alarm",
-          "description": "Changes take effect from the next time this alarm is due. An alarm that is ringing right now keeps going.",
+          "description": "Changes apply from the alarm's next run.",
           "data": {
             "name": "Name",
             "alarm_time": "Alarm time",
-            "lights": "Lights"
+            "lights": "Lights",
+            "audio_mode": "Sound"
           },
           "data_description": {
             "name": "What to call this alarm, for example Weekday or Guest room.",
             "alarm_time": "The time the lights start fading up.",
-            "lights": "The lights this alarm brings up. They are set to their dimmest first, then taken to full."
+            "lights": "The lights this alarm brings up. They are set to their dimmest first, then taken to full.",
+            "audio_mode": "Whether the alarm plays music when it rings, and what plays it. The next page collects the details."
           },
           "sections": {
-            "sound": {
-              "name": "Sound",
-              "description": "Optional. Pick speakers and something to play, or leave the speakers empty for a silent, light-only alarm.",
-              "data": {
-                "audio_targets": "Speakers",
-                "audio_media": "What to play",
-              "audio_playlist": "Music Assistant playlist",
-                "audio_use_music_assistant": "Play through Music Assistant",
-                "audio_radio_mode": "Radio mode",
-                "audio_volume_start": "Starting volume",
-                "audio_volume_end": "Final volume",
-                "audio_volume_minutes": "Volume ramp length",
-                "phone_critical_sound": "Ring through silent mode"
-              },
-              "data_description": {
-                "audio_targets": "The media players that ring when the alarm does.",
-                "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
-              "audio_playlist": "A playlist from your Music Assistant library, played instead of the selection above. The speakers above must be the Music Assistant copies of your players — Music Assistant can only play through its own. Pick one from the list, or type any Music Assistant URI.",
-                "audio_use_music_assistant": "Let Music Assistant resolve and play the selection instead of sending it straight to the speakers.",
-                "audio_radio_mode": "Keep playing similar music once the selection ends.",
-                "audio_volume_start": "The volume the speakers are set to just before playback starts.",
-                "audio_volume_end": "The volume the ramp arrives at while the alarm rings.",
-                "audio_volume_minutes": "How long the volume takes to rise from starting to final, in minutes. Zero keeps the starting volume.",
-                "phone_critical_sound": "Let the phone notification sound even when the phone is muted or in Do Not Disturb. Applies to iPhones; on Android, set a sound on the notification channel in the companion app instead."
-              }
-            },
             "advanced": {
               "name": "Advanced",
               "description": "Sensible defaults are already filled in. Each of these also becomes an entity you can change from a dashboard.",
@@ -181,22 +140,47 @@
                 "ramp_minutes": "Sunrise length",
                 "snooze_minutes": "Snooze length",
                 "notify_targets": "Notify these phones",
-                "gate_entity": "Presence check",
-                "gate_state": "Required state"
+                "phone_critical_sound": "Ring through silent mode",
+                "gate_entity": "Only ring when",
+                "gate_state": "is in this state"
               },
               "data_description": {
                 "ramp_minutes": "How long the lights take to reach full brightness, in minutes.",
                 "snooze_minutes": "How long a snooze lasts before the sunrise starts again from dark.",
                 "notify_targets": "Companion app devices that get a Snooze/Dismiss notification while this alarm rings, re-sent every few minutes until you answer it. Leave empty to rely on the dashboard buttons and your own physical button.",
-                "gate_entity": "Optional. An entity that must be in the required state below for this alarm to fire — your person entity, for example. When it is in any other state, the alarm skips that day.",
-                "gate_state": "The state the presence check must be in for the alarm to fire, for example home or on. A presence check that is unavailable never blocks the alarm."
+                "phone_critical_sound": "Let the phone notification sound even when the phone is muted or in Do Not Disturb. Applies to iPhones; on Android, set a sound on the notification channel in the companion app instead.",
+                "gate_entity": "An entity checked just before the alarm starts — a person, a phone, a workday sensor. Leave empty to always ring.",
+                "gate_state": "The state that entity must be in for the alarm to ring, for example home or on."
               }
             }
+          }
+        },
+        "sound": {
+          "title": "Sound",
+          "description": "How this alarm sounds when it rings. The volume starts low and rises while it plays.",
+          "data": {
+            "audio_playlist": "What to play",
+            "audio_targets": "Speakers",
+            "audio_media": "What to play",
+            "audio_radio_mode": "Radio mode",
+            "audio_volume_start": "Starting volume",
+            "audio_volume_end": "Final volume",
+            "audio_volume_minutes": "Volume ramp length"
+          },
+          "data_description": {
+            "audio_playlist": "A playlist from your Music Assistant library. You can also type anything Music Assistant can find — an artist, an album, a track, or a URI like spotify://playlist/….",
+            "audio_targets": "The speakers that ring when the alarm does. Only Music Assistant players are offered here, because Music Assistant can only play through its own.",
+            "audio_media": "The track, playlist or stream to play, picked from the media browser the way you would to play it by hand.",
+            "audio_radio_mode": "Keep playing similar music once the selection ends. Needs a music provider that can suggest tracks, such as Spotify or YouTube Music.",
+            "audio_volume_start": "The volume the speakers are set to just before playback starts.",
+            "audio_volume_end": "The volume the ramp arrives at while the alarm rings.",
+            "audio_volume_minutes": "How long the volume takes to rise from starting to final, in minutes. Zero keeps the starting volume."
           }
         }
       },
       "error": {
-        "playlist_needs_music_assistant_player": "Music Assistant can only play through its own media players. None of the speakers you picked are Music Assistant players, so the playlist would stay silent. Add the Music Assistant copy of your speaker, or clear the playlist."
+        "sound_needs_speaker": "Pick at least one speaker, or set the alarm's sound back to none.",
+        "playlist_needs_music_assistant_player": "Music Assistant can only play through its own media players. None of the speakers you picked are Music Assistant players, so nothing would play. Pick the Music Assistant copy of your speaker."
       },
       "abort": {
         "reconfigure_successful": "The alarm was updated."
@@ -274,6 +258,15 @@
           "name": "Alarm",
           "description": "The Sunrise Alarm device. Whichever of its alarms is currently in a wake-up is dismissed."
         }
+      }
+    }
+  },
+  "selector": {
+    "audio_mode": {
+      "options": {
+        "none": "Lights only — no sound",
+        "speaker": "Play something on a speaker",
+        "music_assistant": "Play music through Music Assistant"
       }
     }
   }

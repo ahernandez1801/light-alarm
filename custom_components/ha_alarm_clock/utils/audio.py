@@ -162,7 +162,7 @@ class AlarmAudio:
             await self._async_play_music_assistant(
                 music_assistant_targets,
                 playlist,
-                MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST,
+                MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST if "://playlist/" in playlist else "",
                 config,
             )
             return

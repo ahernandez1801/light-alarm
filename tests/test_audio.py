@@ -161,6 +161,32 @@ async def test_playlist_plays_through_music_assistant(
     assert ma_play[0].data["media_type"] == MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST
 
 
+async def test_typed_name_gets_no_media_type_hint(
+    hass: HomeAssistant,
+    audio_data: dict[str, Any],
+    setup_with_data: Any,
+    cycle: AlarmCycle,
+    music_assistant_player: str,
+) -> None:
+    """A free-typed name is sent without a media type, so Music Assistant searches everything."""
+    async_mock_service(hass, LIGHT_DOMAIN, SERVICE_TURN_ON)
+    async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_VOLUME_SET)
+    ma_play = async_mock_service(hass, MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
+
+    typed_name = {
+        **audio_data,
+        CONF_AUDIO_TARGETS: [music_assistant_player],
+        CONF_AUDIO_PLAYLIST: "Queen",
+    }
+    del typed_name[CONF_AUDIO_MEDIA]
+    await setup_with_data(typed_name)
+    await cycle.reach_ringing()
+
+    assert len(ma_play) == 1
+    assert ma_play[0].data["media_id"] == "Queen"
+    assert "media_type" not in ma_play[0].data
+
+
 async def test_music_assistant_targets_only_its_own_players(
     hass: HomeAssistant,
     audio_data: dict[str, Any],
