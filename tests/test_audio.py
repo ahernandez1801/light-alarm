@@ -97,6 +97,7 @@ async def test_music_assistant_path(
     audio_data: dict[str, Any],
     setup_with_data: Any,
     cycle: AlarmCycle,
+    music_assistant_player: str,
 ) -> None:
     """With Music Assistant configured and present, playback goes through it."""
     async_mock_service(hass, LIGHT_DOMAIN, SERVICE_TURN_ON)
@@ -105,15 +106,19 @@ async def test_music_assistant_path(
     ma_play = async_mock_service(hass, MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
 
     await setup_with_data(
-        {**audio_data, CONF_AUDIO_USE_MUSIC_ASSISTANT: True, CONF_AUDIO_RADIO_MODE: True},
+        {
+            **audio_data,
+            CONF_AUDIO_TARGETS: [music_assistant_player],
+            CONF_AUDIO_USE_MUSIC_ASSISTANT: True,
+            CONF_AUDIO_RADIO_MODE: True,
+        },
     )
     await cycle.reach_ringing()
 
     assert play_media == []
     assert len(ma_play) == 1
-    assert ma_play[0].data[ATTR_ENTITY_ID] == [AUDIO_TARGET]
+    assert ma_play[0].data[ATTR_ENTITY_ID] == [music_assistant_player]
     assert ma_play[0].data["media_id"] == AUDIO_MEDIA[ATTR_MEDIA_CONTENT_ID]
-    assert ma_play[0].data["media_type"] == AUDIO_MEDIA[ATTR_MEDIA_CONTENT_TYPE]
     assert ma_play[0].data["radio_mode"] is True
 
 
@@ -122,6 +127,7 @@ async def test_playlist_plays_through_music_assistant(
     audio_data: dict[str, Any],
     setup_with_data: Any,
     cycle: AlarmCycle,
+    music_assistant_player: str,
 ) -> None:
     """A chosen playlist plays through Music Assistant, even without the toggle or a media pick."""
     async_mock_service(hass, LIGHT_DOMAIN, SERVICE_TURN_ON)
@@ -129,16 +135,94 @@ async def test_playlist_plays_through_music_assistant(
     play_media = async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_PLAY_MEDIA)
     ma_play = async_mock_service(hass, MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
 
-    playlist_only = {**audio_data, CONF_AUDIO_PLAYLIST: AUDIO_PLAYLIST}
+    playlist_only = {
+        **audio_data,
+        CONF_AUDIO_TARGETS: [music_assistant_player],
+        CONF_AUDIO_PLAYLIST: AUDIO_PLAYLIST,
+    }
     del playlist_only[CONF_AUDIO_MEDIA]
     await setup_with_data(playlist_only)
     await cycle.reach_ringing()
 
     assert play_media == []
     assert len(ma_play) == 1
-    assert ma_play[0].data[ATTR_ENTITY_ID] == [AUDIO_TARGET]
+    assert ma_play[0].data[ATTR_ENTITY_ID] == [music_assistant_player]
     assert ma_play[0].data["media_id"] == AUDIO_PLAYLIST
     assert ma_play[0].data["media_type"] == MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST
+
+
+async def test_music_assistant_targets_only_its_own_players(
+    hass: HomeAssistant,
+    audio_data: dict[str, Any],
+    setup_with_data: Any,
+    cycle: AlarmCycle,
+    music_assistant_player: str,
+) -> None:
+    """Speakers that Music Assistant does not own are dropped from its play_media call."""
+    async_mock_service(hass, LIGHT_DOMAIN, SERVICE_TURN_ON)
+    async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_VOLUME_SET)
+    ma_play = async_mock_service(hass, MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
+
+    await setup_with_data(
+        {
+            **audio_data,
+            CONF_AUDIO_TARGETS: [AUDIO_TARGET, music_assistant_player],
+            CONF_AUDIO_PLAYLIST: AUDIO_PLAYLIST,
+        },
+    )
+    await cycle.reach_ringing()
+
+    assert len(ma_play) == 1
+    assert ma_play[0].data[ATTR_ENTITY_ID] == [music_assistant_player]
+
+
+async def test_playlist_without_a_music_assistant_speaker_stays_silent(
+    hass: HomeAssistant,
+    audio_data: dict[str, Any],
+    setup_with_data: Any,
+    cycle: AlarmCycle,
+    entities: AlarmEntities,
+) -> None:
+    """A playlist on a speaker Music Assistant does not own never reaches its play_media."""
+    async_mock_service(hass, LIGHT_DOMAIN, SERVICE_TURN_ON)
+    async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_VOLUME_SET)
+    ma_play = async_mock_service(hass, MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
+    play_media = async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_PLAY_MEDIA)
+
+    playlist_only = {**audio_data, CONF_AUDIO_PLAYLIST: AUDIO_PLAYLIST}
+    del playlist_only[CONF_AUDIO_MEDIA]
+    await setup_with_data(playlist_only)
+    await cycle.reach_ringing()
+
+    assert ma_play == []
+    assert play_media == []
+    assert hass.states.get(entities.ringing).state == STATE_ON
+
+
+async def test_browser_media_type_is_dropped_for_music_assistant(
+    hass: HomeAssistant,
+    audio_data: dict[str, Any],
+    setup_with_data: Any,
+    cycle: AlarmCycle,
+    music_assistant_player: str,
+) -> None:
+    """A media browser content type is left out, because Music Assistant rejects it."""
+    async_mock_service(hass, LIGHT_DOMAIN, SERVICE_TURN_ON)
+    async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_VOLUME_SET)
+    ma_play = async_mock_service(hass, MUSIC_ASSISTANT_DOMAIN, MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA)
+
+    await setup_with_data(
+        {
+            **audio_data,
+            CONF_AUDIO_TARGETS: [music_assistant_player],
+            CONF_AUDIO_USE_MUSIC_ASSISTANT: True,
+        },
+    )
+    await cycle.reach_ringing()
+
+    assert len(ma_play) == 1
+    assert "media_type" not in ma_play[0].data
+    assert ma_play[0].data["media_id"] == AUDIO_MEDIA[ATTR_MEDIA_CONTENT_ID]
 
 
 async def test_playlist_without_music_assistant_falls_back(

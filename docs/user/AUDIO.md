@@ -23,19 +23,34 @@ volume.
 
 ## Playing through Music Assistant
 
-If the [Music Assistant](https://www.music-assistant.io/) integration is installed, the Sound section offers two
-extra switches:
+If the [Music Assistant](https://www.music-assistant.io/) integration is installed, the Sound section offers a
+playlist picker and two extra switches:
 
-- **Play through Music Assistant** — the selection is resolved and played by Music Assistant instead of being sent
-  straight to the speakers. Use this when your alarm media lives in a Music Assistant library or provider, for
-  example "my Wake Up playlist, shuffled".
+- **Music Assistant playlist** — a dropdown of the playlists in your Music Assistant library, read from Music
+  Assistant when the dialog opens. Choosing one is all you need: it is played instead of **What to play**, and you
+  do not have to switch anything else on. You can also type any Music Assistant URI, for example
+  `spotify://playlist/aabbccddeeff`.
+- **Play through Music Assistant** — for a selection you picked in **What to play** rather than from the playlist
+  dropdown, resolve and play it through Music Assistant instead of sending it straight to the speakers.
 - **Radio mode** — after the selection ends, Music Assistant keeps playing similar music instead of stopping.
 
-Pick the playlist or track from Music Assistant's own section of the media browser, then enable **Play through
-Music Assistant**. The speakers you target must be players Music Assistant knows about.
+### Pick the Music Assistant copy of your speaker
 
-If Music Assistant is later removed, the alarm falls back to playing the media directly and notes it in the log —
-it never fails the ring.
+> ⚠️ This is the one thing that silently stops the music.
+
+Music Assistant creates **its own media player entity** for every player it controls, and it can only play through
+those. Most speakers therefore appear twice in the **Speakers** list: once from the integration that found them
+(Sonos, Chromecast, ESPHome) and once from Music Assistant. Only the Music Assistant one works for playlists.
+
+If you pick the wrong one, Home Assistant matches no player, plays nothing, and reports no error. The alarm's
+dialog now refuses to save a playlist without a Music Assistant speaker and tells you why, and an alarm already
+saved that way writes a warning to the log at ring time naming the speakers it could not use.
+
+To tell them apart, hover the entity in the Speakers dropdown and check which integration it belongs to, or look
+the entity up under **Settings** → **Devices & services** → **Entities**.
+
+If Music Assistant is later removed, the alarm falls back to playing **What to play** directly and notes it in the
+log — it never fails the ring.
 
 ## Using the phone as the speaker
 

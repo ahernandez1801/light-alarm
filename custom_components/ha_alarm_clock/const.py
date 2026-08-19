@@ -46,6 +46,21 @@ MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST = "playlist"
 MUSIC_ASSISTANT_SERVICE_GET_LIBRARY = "get_library"
 MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA = "play_media"
 
+# music_assistant.play_media coerces media_type to its own enum and rejects anything
+# else, including the content types the Home Assistant media browser hands out.
+MUSIC_ASSISTANT_MEDIA_TYPES = frozenset(
+    {
+        "album",
+        "artist",
+        "audiobook",
+        "folder",
+        "playlist",
+        "podcast",
+        "radio",
+        "track",
+    },
+)
+
 STORAGE_KEY = f"{DOMAIN}.alarm_state"
 STORAGE_VERSION = 1
 

@@ -19,11 +19,14 @@ from custom_components.ha_alarm_clock.const import (
     CONF_RAMP_MINUTES,
     CONF_SNOOZE_MINUTES,
     DOMAIN,
+    MUSIC_ASSISTANT_DOMAIN,
     SUBENTRY_TYPE_ALARM,
 )
+from homeassistant.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.const import ATTR_ENTITY_ID, CONF_NAME
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
 ALARM_NAME = "Weekday"
@@ -169,6 +172,25 @@ def alarm_data() -> dict[str, Any]:
 
     """
     return dict(ALARM_DATA)
+
+
+@pytest.fixture
+def music_assistant_player(hass: HomeAssistant) -> str:
+    """
+    Register a media player owned by the Music Assistant integration.
+
+    Returns:
+        The entity ID of a speaker `music_assistant.play_media` can act on.
+
+    """
+    entry = er.async_get(hass).async_get_or_create(
+        MEDIA_PLAYER_DOMAIN,
+        MUSIC_ASSISTANT_DOMAIN,
+        "bedroom-ma",
+        suggested_object_id="bedroom_ma",
+    )
+
+    return entry.entity_id
 
 
 @pytest.fixture
