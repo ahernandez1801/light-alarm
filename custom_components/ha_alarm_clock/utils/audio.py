@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from custom_components.ha_alarm_clock.const import (
     CONF_AUDIO_MEDIA,
+    CONF_AUDIO_PLAYLIST,
     CONF_AUDIO_RADIO_MODE,
     CONF_AUDIO_TARGETS,
     CONF_AUDIO_USE_MUSIC_ASSISTANT,
@@ -22,6 +23,7 @@ from custom_components.ha_alarm_clock.const import (
     DEFAULT_AUDIO_VOLUME_START,
     LOGGER,
     MUSIC_ASSISTANT_DOMAIN,
+    MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST,
     MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA,
 )
 from homeassistant.components.media_player import (
@@ -69,8 +71,9 @@ class AlarmAudio:
         config = self._async_config(subentry_id)
         targets = list(config.get(CONF_AUDIO_TARGETS, []))
         media = config.get(CONF_AUDIO_MEDIA)
+        playlist = config.get(CONF_AUDIO_PLAYLIST)
 
-        if not targets or not media:
+        if not targets or not (media or playlist):
             return
 
         start = int(config.get(CONF_AUDIO_VOLUME_START, DEFAULT_AUDIO_VOLUME_START))
@@ -109,14 +112,12 @@ class AlarmAudio:
     async def _async_play(
         self,
         targets: Sequence[str],
-        media: dict[str, Any],
+        media: dict[str, Any] | None,
         config: dict[str, Any],
     ) -> None:
         """Start playback through Music Assistant when configured and present, else plainly."""
-        content_id = media.get(ATTR_MEDIA_CONTENT_ID, "")
-        content_type = media.get(ATTR_MEDIA_CONTENT_TYPE, "")
-
-        use_music_assistant = bool(config.get(CONF_AUDIO_USE_MUSIC_ASSISTANT, False))
+        playlist = str(config.get(CONF_AUDIO_PLAYLIST) or "")
+        use_music_assistant = bool(playlist) or bool(config.get(CONF_AUDIO_USE_MUSIC_ASSISTANT, False))
         music_assistant_available = self._hass.services.has_service(
             MUSIC_ASSISTANT_DOMAIN,
             MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA,
@@ -128,17 +129,17 @@ class AlarmAudio:
                 "falling back to media_player.play_media",
             )
 
+        if playlist and music_assistant_available:
+            await self._async_play_music_assistant(targets, playlist, MUSIC_ASSISTANT_MEDIA_TYPE_PLAYLIST, config)
+            return
+
+        content_id = (media or {}).get(ATTR_MEDIA_CONTENT_ID, "")
+        content_type = (media or {}).get(ATTR_MEDIA_CONTENT_TYPE, "")
+        if not content_id:
+            return
+
         if use_music_assistant and music_assistant_available:
-            await self._async_call(
-                MUSIC_ASSISTANT_DOMAIN,
-                MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA,
-                {
-                    ATTR_ENTITY_ID: list(targets),
-                    ATTR_MA_MEDIA_ID: content_id,
-                    ATTR_MA_MEDIA_TYPE: content_type,
-                    ATTR_MA_RADIO_MODE: bool(config.get(CONF_AUDIO_RADIO_MODE, False)),
-                },
-            )
+            await self._async_play_music_assistant(targets, content_id, content_type, config)
             return
 
         await self._async_call_media(
@@ -147,6 +148,25 @@ class AlarmAudio:
                 ATTR_ENTITY_ID: list(targets),
                 ATTR_MEDIA_CONTENT_ID: content_id,
                 ATTR_MEDIA_CONTENT_TYPE: content_type,
+            },
+        )
+
+    async def _async_play_music_assistant(
+        self,
+        targets: Sequence[str],
+        media_id: str,
+        media_type: str,
+        config: dict[str, Any],
+    ) -> None:
+        """Start playback of one item through Music Assistant."""
+        await self._async_call(
+            MUSIC_ASSISTANT_DOMAIN,
+            MUSIC_ASSISTANT_SERVICE_PLAY_MEDIA,
+            {
+                ATTR_ENTITY_ID: list(targets),
+                ATTR_MA_MEDIA_ID: media_id,
+                ATTR_MA_MEDIA_TYPE: media_type,
+                ATTR_MA_RADIO_MODE: bool(config.get(CONF_AUDIO_RADIO_MODE, False)),
             },
         )
 
