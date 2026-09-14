@@ -19,6 +19,7 @@
   // Runs on every container creation — installs all dependencies.
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   // Runs on every client attach — detects fresh blueprints and triggers initialization.
+  "postAttachCommand": "bash .devcontainer/post-attach.sh",
   "containerEnv": {
     // Python runtime variables — must be set for ALL Python processes, including those spawned
     // by VS Code extensions (Pylance, test runner, Ruff) that never go through our shell scripts.
@@ -58,7 +59,6 @@
       "packages": [
         "autoconf",
         "automake",
-        "bubblewrap",
         "bat",
         "eza",
         "fd-find",
@@ -162,6 +162,9 @@
           "**/.env": false,
           "**/.env.*": false,
           "**/.git/**": false,
+          ".agents/hooks/**": false,
+          ".claude/settings.json": false,
+          ".codex/hooks.json": false,
           ".github/workflows/**": false,
           ".github/actions/**": false,
           "release-please-config.json": false,
