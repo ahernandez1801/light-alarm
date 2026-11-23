@@ -38,7 +38,11 @@ echo ""
 echo ""
 "$SCRIPT_DIR/markdown-check"
 echo ""
+"$SCRIPT_DIR/decisions" --check
+echo ""
 "$SCRIPT_DIR/skills-check"
+echo ""
+"$SCRIPT_DIR/architecture-check"
 
 run_hook "lint-check" "post"
 log_success "Linting check completed"
